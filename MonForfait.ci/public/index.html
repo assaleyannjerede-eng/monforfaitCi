@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MonForfait.ci - Connexion</title>
+  <!-- Feuille de style contenant l'animation de fond douce (req 3) -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!--
+    Req 3 : La couleur de fond change de facon douce grace a
+    l'animation "backgroundShift" definie dans style.css.
+    Elle cycle entre plusieurs degrades toutes les 12 secondes.
+  -->
+  <div class="container">
+    <div class="card">
+      <!-- Logo avec animation logoWiggle -->
+      <img src="img/logo.png" class="logo" alt="Logo MonForfait">
+      <h1>Connexion</h1>
+
+      <!-- Champ email -->
+      <input type="email"    id="email"    placeholder="Email">
+      <!-- Champ mot de passe -->
+      <input type="password" id="password" placeholder="Mot de passe">
+<div
+  class="h-captcha"
+  data-sitekey="79849334-5e9c-482e-9d6a-971e557e7a88"
+  data-callback="onHCaptchaSuccess"
+  data-expired-callback="onHCaptchaExpired"
+  data-error-callback="onHCaptchaError">
+</div>
+      <!-- Bouton connexion : appelle login() dans app.js -->
+      <button id="loginBtn">Se connecter</button>
+
+
+      <p>Pas encore inscrit ? <a href="register.html">Créer un compte</a></p>
+    </div>
+  </div>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0"></script>
+  <script src="js/supabase.js"></script>
+  <!-- Donnees des forfaits (requis par app.js) -->
+  <script src="js/forfaits.js"></script>
+  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+  <!-- Logique principale (contient login()) -->
+  <script src="js/app.js"></script>
+</body>
+</html>

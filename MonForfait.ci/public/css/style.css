@@ -1,0 +1,217 @@
+/* ==============================================
+   style.css - Styles des pages Connexion/Inscription
+   Req 3 : Animation de changement de couleur DOUCE
+   ============================================== */
+
+/* Reset de base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ====================================================
+   Req 3 : Corps de page avec animation douce de fond
+   - transition-timing: ease-in-out (tres doux)
+   - duree : 15 secondes (lente et apaisante)
+   - background-size 400% permet la fluidite
+   ==================================================== */
+body {
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* Fond degrade en animation douce - req 3 */
+  background: linear-gradient(-45deg, #6EE7B7, #3B82F6, #8B5CF6, #EC4899, #F59E0B, #10B981);
+  background-size: 400% 400%;
+  animation: backgroundShiftDoux 15s ease-in-out infinite;
+}
+
+/* Animation douce avec transition progressive entre couleurs (req 3) */
+@keyframes backgroundShiftDoux {
+  0%   { background-position: 0%   50%; }
+  25%  { background-position: 50%  0%;  }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position: 50%  100%; }
+  100% { background-position: 0%   50%; }
+}
+
+/* ====================================================
+   Carte de formulaire (login/register)
+   ==================================================== */
+.container {
+  width: 100%;
+  max-width: 420px;
+  padding: 0 16px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  padding: 40px 32px;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: cardPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+  transform: translateY(30px) scale(0.95);
+}
+
+@keyframes cardPop {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Logo avec animation legere */
+.logo {
+  width: 80px;
+  margin-bottom: 20px;
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+/* Titre */
+h1 {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #1F2937;
+  margin-bottom: 24px;
+}
+
+/* Champs de saisie */
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+  width: 100%;
+  padding: 13px 16px;
+  margin: 8px 0;
+  border-radius: 14px;
+  border: 1.5px solid #E5E7EB;
+  font-size: 1rem;
+  background: #FAFAFA;
+  color: #1F2937;
+  transition: border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  outline: none;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus {
+  border-color: #3B82F6;
+  background: #FFF;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+/* Bouton principal */
+button {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  margin-top: 16px;
+  cursor: pointer;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+button:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Liens */
+a {
+  color: #3B82F6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Textes complementaires */
+p {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: #6B7280;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .card {
+    padding: 30px 20px;
+  }
+}
+
+/* =========================================
+   RESPONSIVE MOBILE — Login / Register
+   ========================================= */
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 12px;
+  }
+
+  .card {
+    padding: 28px 16px;
+    border-radius: 18px;
+  }
+
+  .logo {
+    width: 64px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    margin-bottom: 18px;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="email"] {
+    padding: 11px 14px;
+    font-size: 0.95rem;
+    border-radius: 12px;
+  }
+
+  button {
+    padding: 12px;
+    font-size: 0.95rem;
+    border-radius: 12px;
+    margin-top: 14px;
+  }
+
+  p {
+    font-size: 0.85rem;
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .card {
+    padding: 22px 14px;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+  }
+}
