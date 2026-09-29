@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>MonForfait.ci - Accueil</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="img/logo.png">
   <link rel="stylesheet" href="css/jj.css">
   <style>
-    /* Req 13 : accordeons defilants si beaucoup d'offres */
+    
     .panel { max-height:300px; overflow-y:auto; padding:10px 6px 0 6px; scrollbar-width:thin; scrollbar-color:rgba(255,212,0,0.3) transparent; }
     .panel::-webkit-scrollbar { width:5px; }
     .panel::-webkit-scrollbar-thumb { background:rgba(255,212,0,0.3); border-radius:4px; }
@@ -28,14 +29,14 @@
 </head>
 <body>
 
-  <!-- HEADER - req 11 : zone userArea injectee par app.js -->
+  
   <header class="header" role="banner">
     <img src="img/logo.png" alt="MonForfait logo" class="logo">
     <div class="brand">
       <h1>MonForfait.ci</h1>
       <p>Votre partenaire pour recharges et transferts</p>
     </div>
-    <!-- req 11 : connecte => nom + deconnexion | non connecte => connexion + inscription -->
+   
     <div class="user-area" id="userArea">
       <button class="auth-btn login-btn"    id="userAreaLoginFallback">Se connecter</button>
       <button class="auth-btn register-btn" id="userAreaRegisterFallback">S'inscrire</button>
@@ -44,12 +45,10 @@
 
   <main class="container">
 
-    <!-- BANNIERE BIENVENUE - req 1 -->
-    <!-- Non connecte : "Bienvenue sur MonForfait.ci !" -->
-    <!-- Connecte : "Bienvenue, [Nom] !" -->
+  
     <div id="welcomeBanner" class="welcome-banner hidden"></div>
 
-<!-- Point 6 : Bloc "Comment souscrire" en haut de la page d'accueil -->
+
     <section class="steps-block" aria-label="Comment souscrire">
       <h2 class="steps-title">Comment souscrire en 3 étapes</h2>
       <div class="steps-grid">
@@ -77,11 +76,11 @@
 
     <div class="grid">
 
-      <!-- COLONNE GAUCHE : operateurs et services -->
+      
       <div>
         <section class="card">
           <h2>Choisir opérateur</h2>
-          <!-- req 5 : chaque operateur ouvre ses propres forfaits dans le modal -->
+          
           <div class="operators" role="list">
             <button class="op-btn" data-operateur="MTN"    aria-label="MTN">
               <img src="img/logo_mtn.png" alt="MTN">
@@ -106,18 +105,18 @@
         </section>
       </div>
 
-      <!-- COLONNE DROITE : contact, politique, historique -->
+     
       <aside>
-        <!-- req 10 : section contact REDUITE -->
+        
         <div class="card" style="padding:10px 14px">
           <h3 style="font-size:13px;margin-bottom:5px">📞 Contact &amp; WhatsApp</h3>
           <div class="contact-compact">
-            <span style="font-weight:700;color:var(--accent)">07 87 72 98 39</span>
-            <a href="https://wa.me/2250787729839" target="_blank" rel="noopener">💬 WhatsApp</a>
+            <span style="font-weight:700;color:var(--accent)">05 00 43 50 66</span>
+            <a href="https://wa.me/2250500435066" target="_blank" rel="noopener">💬 WhatsApp</a>
           </div>
         </div>
 
-        <!-- Politique de reclamation -->
+      
         <div class="card" style="margin-top:10px">
           <h3 style="font-size:13px">Politique de réclamation</h3>
           <p class="policy" style="margin-top:6px">
@@ -125,26 +124,21 @@
           </p>
         </div>
 
-        <!-- HISTORIQUE - req 8 (bouton effacer si connecte) + req 9 (anonyme voit pending) -->
+        
         <div class="card" style="margin-top:10px">
           <h3 style="font-size:13px">Historique des transactions</h3>
-          <!-- req 8 : visible uniquement si connecte -->
+         
           <div id="clearHistoryBtnContainer">
             <button id="clearHistoryBtn">🗑️ Effacer mon historique</button>
           </div>
-          <!-- Liste injectee par afficherHistorique() dans app.js -->
+         
           <div class="historique-list" aria-live="polite"></div>
         </div>
       </aside>
     </div>
   </main>
 
-  <!-- MODAL FORFAIT
-       req 2  : accordeons fermes par defaut
-       req 5  : forfaits propres a chaque operateur
-       req 6  : validation prefixe numero receveur
-       req 13 : panneaux defilants
-       req 15 : accessible sans connexion -->
+ 
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true"
        aria-labelledby="titre" aria-hidden="true">
     <div class="modal-content" role="document">
@@ -155,50 +149,50 @@
         <fieldset>
           <legend class="sr-only">Informations de paiement</legend>
 
-          <!-- Numero Wave du payeur -->
+          
           <label for="payerNumero">Votre numéro Wave (payeur)</label>
           <input id="payerNumero" name="payerNumero" type="tel" inputmode="numeric"
                  placeholder="+225XXXXXXXXXX" required>
 
-          <!-- Numero du receveur - req 6 : prefixe valide selon operateur -->
+          
           <label for="receveurNumero">Numéro du receveur</label>
           <input id="receveurNumero" name="receveurNumero" type="tel" inputmode="numeric"
                  placeholder="+225XXXXXXXXXX" required>
-          <!-- Mis a jour par ouvrirModal() : "Numero Orange (07) / MTN (05) / MOOV (01)" -->
+          
           <div class="field-hint" id="receveurHint"></div>
         </fieldset>
 
-        <!-- Accordeons des forfaits - req 2 : fermes par defaut a l'ouverture -->
+        
         <fieldset class="forfaits-block" aria-labelledby="forfaitsTitle">
           <legend id="forfaitsTitle" class="sr-only">Choisir un forfait</legend>
 
-          <!-- Accordeon Appels -->
+         
           <button type="button" class="accordion"
                   aria-expanded="false" aria-controls="panel-appels" id="btn-appels">
             📞 Forfaits Appels <span class="chev">▾</span>
           </button>
-          <!-- req 13 : .panel a max-height + overflow-y:auto -->
+          
           <div id="panel-appels" class="panel hidden" role="region" aria-labelledby="btn-appels">
-            <!-- Genere par refreshForfaitsPanel() dans app.js -->
+            
           </div>
 
-          <!-- Accordeon Internet -->
+          
           <button type="button" class="accordion"
                   aria-expanded="false" aria-controls="panel-internet" id="btn-internet">
             📶 Forfaits Internet <span class="chev">▾</span>
           </button>
-          <!-- req 13 : .panel a max-height + overflow-y:auto -->
+          
           <div id="panel-internet" class="panel hidden" role="region" aria-labelledby="btn-internet">
-            <!-- Genere par refreshForfaitsPanel() dans app.js -->
+           
           </div>
         </fieldset>
 
-        <!-- Note : prix inclut commission 10% (req 4) -->
+        
         <p class="prix-note">* Les prix affichés incluent les frais de service (10%)</p>
 
         <div class="form-actions">
-          <!-- req 14 : le clic ouvre l'URL Wave dans app.js -->
-          <button type="submit" class="btn-payer">💳 Payer avec Wave</button>
+          
+          <button type="submit" class="btn-payer">💳 Payer Wave</button>
           <button type="button" class="btn-cancel" id="cancelModal">Annuler</button>
         </div>
 
@@ -225,11 +219,11 @@
             <li>📞 Forfaits Appels</li>
           </ul>
         </div>
-        <!-- req 10 : contact compact dans le footer -->
+        
         <div class="footer-col">
           <h4>Contact</h4>
           <p style="margin:0;line-height:2;font-size:13px">
-            📞 <strong>07 87 72 98 39</strong><br>
+            📞 <strong>05 00 43 50 66</strong><br>
             <a href="https://wa.me/2250787729839" target="_blank" rel="noopener"
                style="color:var(--accent);font-weight:600">💬 WhatsApp</a>
           </p>
