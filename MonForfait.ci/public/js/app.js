@@ -423,6 +423,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* =====================================================
+     OUTILS : format des prix + recherche d'une offre
+     ===================================================== */
+
+  function formaterPrix(n) {
+    return Number(n).toLocaleString('fr-FR') + '\u00a0F';
+  }
+
+  /* Retrouve une offre du catalogue (base ou forfaits.js) par son code.
+     Renvoie null si elle n'existe plus (forfait retiré, etc.). */
+  function trouverOffre(operateur, code) {
+
+    if (typeof getForfaits !== 'function') return null;
+
+    for (const cat of ['appels', 'internet']) {
+
+      const offre =
+        getForfaits(operateur, cat)
+          .find(f => f.code === code);
+
+      if (offre) return { offre, categorie: cat };
+    }
+
+    return null;
+  }
+
+  /* =====================================================
      GENERATION DYNAMIQUE DES FORFAITS
      ===================================================== */
 
@@ -449,11 +475,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    /* Offres rangées du moins cher au plus cher */
     const offres =
       getForfaits(
         operateur,
         categorie
-      );
+      )
+        .slice()
+        .sort((a, b) => a.prix - b.prix);
 
     if (!offres.length) {
 
@@ -518,23 +547,24 @@ document.addEventListener('DOMContentLoaded', () => {
       descEl.className =
         'forfait-desc';
 
-      descEl.append(
-        offre.desc + ' — '
-      );
+      descEl.textContent =
+        offre.desc;
 
-      const strong =
-        document.createElement('strong');
+      const priceEl =
+        document.createElement('span');
 
-      strong.textContent =
-        prixFinal + ' F';
+      priceEl.className =
+        'forfait-price';
 
-      descEl.appendChild(strong);
+      priceEl.textContent =
+        formaterPrix(prixFinal);
 
       info.appendChild(nameEl);
       info.appendChild(descEl);
 
       label.appendChild(input);
       label.appendChild(info);
+      label.appendChild(priceEl);
 
       container.appendChild(label);
     });
@@ -596,6 +626,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!historiqueContainer) return;
 
     historiqueContainer.replaceChildren();
+
+    afficherHabituels();
 
     const connected =
       isUserConnected();
@@ -750,10 +782,201 @@ document.addEventListener('DOMContentLoaded', () => {
         )
       );
 
+      if (it.operateur && it.forfaitCode) {
+
+        const rebuy =
+          document.createElement('button');
+
+        rebuy.type = 'button';
+
+        rebuy.className = 'rebuy-btn';
+
+        rebuy.textContent = '↻ Racheter';
+
+        rebuy.setAttribute(
+          'aria-label',
+          'Racheter ' +
+          (it.forfaitLabel || 'ce forfait') +
+          ' pour ' +
+          (it.receveur || 'ce numéro')
+        );
+
+        rebuy.addEventListener(
+          'click',
+          () => racheter(it)
+        );
+
+        right.appendChild(rebuy);
+      }
+
       div.appendChild(left);
       div.appendChild(right);
 
       historiqueContainer.appendChild(div);
+    });
+  }
+
+  /* =====================================================
+     VOS ACHATS HABITUELS
+     -----------------------------------------------------
+     Les 3 achats confirmés les plus répétés (même opérateur,
+     même forfait, même receveur). Réservé aux comptes connectés
+     (un invité ne voit pas ses achats confirmés, cf. req 9).
+     Le prix affiché est celui d'AUJOURD'HUI, pas l'ancien.
+     ===================================================== */
+
+  function calculerHabituels() {
+
+    const groupes = new Map();
+
+    historique.forEach(tx => {
+
+      if (
+        !tx ||
+        tx.status !== 'confirmed' ||
+        !tx.forfaitCode ||
+        !tx.receveur
+      ) return;
+
+      const cle = [
+        tx.operateur,
+        tx.forfaitCode,
+        tx.receveur
+      ].join('|');
+
+      const t = Date.parse(tx.date) || 0;
+
+      const g = groupes.get(cle);
+
+      if (g) {
+
+        g.count++;
+
+        if (t > g.last) {
+          g.last = t;
+          g.tx = tx;
+        }
+
+      } else {
+        groupes.set(cle, { count: 1, last: t, tx });
+      }
+    });
+
+    return Array.from(groupes.values())
+      /* on ne propose pas une offre qui n'existe plus */
+      .filter(g => trouverOffre(g.tx.operateur, g.tx.forfaitCode))
+      .sort((a, b) => b.count - a.count || b.last - a.last)
+      .slice(0, 3);
+  }
+
+  function afficherHabituels() {
+
+    const card =
+      document.getElementById('habitualCard');
+
+    const list =
+      document.getElementById('habitualList');
+
+    if (!card || !list) return;
+
+    list.replaceChildren();
+
+    const items =
+      isUserConnected()
+        ? calculerHabituels()
+        : [];
+
+    card.hidden = items.length === 0;
+
+    items.forEach(g => {
+
+      const tx = g.tx;
+
+      const { offre } =
+        trouverOffre(tx.operateur, tx.forfaitCode);
+
+      const prixActuel =
+        prixAvecCommission(offre.prix);
+
+      const btn =
+        document.createElement('button');
+
+      btn.type = 'button';
+
+      btn.className = 'habit-item';
+
+      btn.setAttribute(
+        'aria-label',
+        'Racheter ' + offre.nom + ' ' + offre.desc +
+        ' pour ' + tx.receveur
+      );
+
+      const main =
+        document.createElement('div');
+
+      main.className = 'habit-main';
+
+      const titre =
+        document.createElement('span');
+
+      titre.className = 'habit-title';
+
+      titre.textContent =
+        offre.nom + ' · ' + offre.desc;
+
+      const sub =
+        document.createElement('span');
+
+      sub.className = 'habit-sub';
+
+      const opSpan =
+        document.createElement('span');
+
+      opSpan.textContent = tx.operateur;
+
+      opSpan.style.color =
+        (OPERATOR_THEMES[tx.operateur] || {}).accent ||
+        '#ffd400';
+
+      sub.appendChild(opSpan);
+
+      sub.append(' · ' + tx.receveur);
+
+      main.appendChild(titre);
+      main.appendChild(sub);
+
+      const side =
+        document.createElement('div');
+
+      side.className = 'habit-side';
+
+      const prix =
+        document.createElement('span');
+
+      prix.className = 'habit-price';
+
+      prix.textContent =
+        formaterPrix(prixActuel);
+
+      const cta =
+        document.createElement('span');
+
+      cta.className = 'habit-cta';
+
+      cta.textContent = '↻ Racheter';
+
+      side.appendChild(prix);
+      side.appendChild(cta);
+
+      btn.appendChild(main);
+      btn.appendChild(side);
+
+      btn.addEventListener(
+        'click',
+        () => racheter(tx)
+      );
+
+      list.appendChild(btn);
     });
   }
 
@@ -975,6 +1198,10 @@ document.addEventListener('DOMContentLoaded', () => {
       'true'
     );
 
+    document.body.classList.remove(
+      'modal-open'
+    );
+
     if (paymentForm) {
       paymentForm.reset();
     }
@@ -1041,8 +1268,10 @@ document.addEventListener('DOMContentLoaded', () => {
      OUVRIR MODAL
      ===================================================== */
 
+  /* prefill (optionnel, utilisé par « Racheter ») :
+       { payer, receveur, forfaitCode, ancienPrix } */
   window.ouvrirModal =
-    function(op) {
+    function(op, prefill) {
 
       currentOperateur =
         op || 'MTN';
@@ -1111,6 +1340,11 @@ document.addEventListener('DOMContentLoaded', () => {
         'false'
       );
 
+      /* Empêche la page derrière de défiler */
+      document.body.classList.add(
+        'modal-open'
+      );
+
       [btnAppels, btnInternet]
         .forEach(b => {
 
@@ -1138,9 +1372,34 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
+      /* --- Racheter : on préremplit numéros + forfait --- */
+      if (prefill) {
+        appliquerPrefill(prefill);
+      }
+
+      const formScroll =
+        modal.querySelector('form');
+
+      if (formScroll && !prefill) {
+        formScroll.scrollTop = 0;
+      }
+
       setTimeout(() => {
 
         updateFocusable();
+
+        if (prefill) {
+
+          /* Tout est prêt : le curseur va directement sur « Payer » */
+          const payBtn =
+            modal.querySelector(
+              '.btn-payer'
+            );
+
+          if (payBtn) payBtn.focus();
+
+          return;
+        }
 
         const p =
           document.getElementById(
@@ -1151,6 +1410,99 @@ document.addEventListener('DOMContentLoaded', () => {
 
       }, 50);
     };
+
+  function appliquerPrefill(prefill) {
+
+    if (payerNumero && prefill.payer) {
+      payerNumero.value = prefill.payer;
+    }
+
+    if (receveurNumero && prefill.receveur) {
+      receveurNumero.value = prefill.receveur;
+    }
+
+    const radio =
+      Array.from(
+        paymentForm.querySelectorAll(
+          'input[name="forfait"]'
+        )
+      ).find(
+        r => r.value === prefill.forfaitCode
+      );
+
+    if (!radio) {
+
+      /* L'offre n'existe plus : on garde les numéros, on laisse choisir */
+      formMessage.textContent =
+        'Ce forfait n\'est plus disponible. Choisissez-en un autre.';
+
+      formMessage.style.color =
+        '#fbbf24';
+
+      return;
+    }
+
+    radio.checked = true;
+
+    /* Ouvre l'accordéon (Appels ou Internet) qui contient l'offre */
+    const panel =
+      radio.closest('.panel');
+
+    const bouton =
+      panel === panelAppels
+        ? btnAppels
+        : btnInternet;
+
+    if (panel && bouton) {
+      toggleAccordion(bouton, panel);
+    }
+
+    radio.closest('.forfait-card')
+      ?.scrollIntoView({ block: 'center' });
+
+    const nouveauPrix =
+      parseInt(radio.dataset.prix, 10) || 0;
+
+    const ancienPrix =
+      Number(prefill.ancienPrix) || 0;
+
+    if (ancienPrix && nouveauPrix !== ancienPrix) {
+
+      formMessage.textContent =
+        'Le prix a changé depuis votre dernier achat : ' +
+        formaterPrix(ancienPrix) +
+        ' → ' +
+        formaterPrix(nouveauPrix) +
+        '. Vérifiez puis payez.';
+
+      formMessage.style.color =
+        '#fbbf24';
+
+    } else {
+
+      formMessage.textContent =
+        'Votre achat précédent est prérempli. Vérifiez puis payez.';
+
+      formMessage.style.color =
+        '#cbd5e1';
+    }
+  }
+
+  /* Bouton « Racheter » : rouvre le formulaire avec le même achat */
+  function racheter(tx) {
+
+    if (!tx || !tx.operateur) return;
+
+    window.ouvrirModal(
+      tx.operateur,
+      {
+        payer: tx.payer,
+        receveur: tx.receveur,
+        forfaitCode: tx.forfaitCode,
+        ancienPrix: tx.prix
+      }
+    );
+  }
 
   document
     .querySelectorAll(
@@ -1546,12 +1898,12 @@ document.addEventListener('DOMContentLoaded', () => {
             forfaitInput
               .closest('.forfait-card')
               ?.querySelector(
-                '.forfait-desc strong'
+                '.forfait-price'
               );
 
           if (strongPrix) {
             strongPrix.textContent =
-              prix + ' F';
+              formaterPrix(prix);
           }
 
           formMessage.textContent =
@@ -1958,7 +2310,10 @@ function demarrerRealtimeTransactions(uid) {
 
   startPeriodicPurge();
 
-  chargerCatalogueDepuisBDD();
+  /* Une fois le catalogue chargé, on rafraîchit les achats habituels
+     (leurs prix et leur disponibilité dépendent du catalogue). */
+  chargerCatalogueDepuisBDD()
+    .then(() => afficherHistorique());
 
   /* Pont vers le scope externe (onAuthStateChange) :
      ces deux fonctions sont définies ici et n'existaient
