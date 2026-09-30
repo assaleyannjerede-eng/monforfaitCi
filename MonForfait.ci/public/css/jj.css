@@ -440,3 +440,183 @@
   .forfait-card { gap: 6px; }
   .forfait-name { font-size: 13px; }
 }
+
+
+/* =========================================================
+   MODAL DÉFILANT + OFFRES RANGÉES + RACHETER
+   (placé en fin de fichier pour l'emporter sur les règles
+   précédentes, y compris celles des media queries)
+   ========================================================= */
+
+/* --- Modal : jamais plus grand que l'écran --- */
+body.modal-open { overflow: hidden; }
+
+.modal {
+  padding: 12px;
+  overscroll-behavior: contain;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 600px;
+  max-height: calc(100vh - 24px);   /* repli anciens navigateurs */
+  max-height: calc(100dvh - 24px);  /* tient compte de la barre d'adresse mobile */
+  padding: 0;
+  overflow: hidden;                 /* seul le formulaire défile */
+  /* fond opaque : le texte de la page derrière ne doit pas transparaître */
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+/* Titre fixe en haut */
+.modal-content > h2 {
+  flex: none;
+  margin: 0;
+  padding: 16px 52px 12px 18px;
+  font-size: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.close {
+  width: 36px;
+  height: 36px;
+  right: 8px;
+  top: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.close:hover,
+.close:focus-visible { background: rgba(255, 255, 255, 0.1); }
+
+/* Le formulaire est la zone qui défile */
+.modal-content > form {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 18px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+/* Pied fixe : message + boutons toujours visibles */
+.form-footer {
+  position: sticky;
+  bottom: 0;
+  margin: 14px -18px 0;
+  padding: 10px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: #182235;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.form-footer .form-message { margin: 0 0 8px; font-size: 13px; }
+.form-footer .form-message:empty { display: none; }
+.form-footer .form-actions { margin-top: 0; }
+.form-footer .btn-payer { flex: 1; font-weight: 700; }
+
+.prix-note { margin: 12px 0 0; }
+
+/* --- Offres : grille alignée, prix à droite --- */
+.forfait-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.forfait-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.forfait-card:hover { transform: none; }
+.forfait-card input[type="radio"] { margin: 0; }
+.forfait-card:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.forfait-card:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.forfait-info { min-width: 0; }
+.forfait-name { font-size: 14px; line-height: 1.25; }
+.forfait-desc { margin-top: 2px; line-height: 1.3; }
+
+.forfait-price {
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* --- Racheter (historique) --- */
+.rebuy-btn {
+  margin-top: 2px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rebuy-btn:hover,
+.rebuy-btn:focus-visible { color: #ffd400; border-color: #ffd400; }
+
+/* --- Vos achats habituels --- */
+.habit-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+.habit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.habit-item:hover,
+.habit-item:focus-visible { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.28); }
+
+.habit-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.habit-title { font-weight: 700; font-size: 14px; line-height: 1.25; }
+.habit-sub { font-size: 12px; color: #9aa6b2; }
+.habit-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.habit-price { font-weight: 800; font-size: 14px; }
+.habit-cta { font-size: 12px; font-weight: 600; color: #ffd400; }
+
+/* --- Petits écrans --- */
+@media (max-width: 580px) {
+  .modal { padding: 8px; align-items: flex-end; } /* le modal se pose en bas, plus facile au pouce */
+  .modal-content { max-height: calc(100dvh - 16px); border-radius: 14px; }
+  .modal-content > h2 { font-size: 16px; padding: 14px 48px 10px 14px; }
+  .modal-content > form { padding: 2px 14px 0; }
+  .form-footer { margin: 12px -14px 0; padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .form-footer .form-actions { flex-direction: column; gap: 8px; }
+  .forfait-row { grid-template-columns: 1fr; }
+  .forfait-card { padding: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .habit-item { transition: none; }
+}
