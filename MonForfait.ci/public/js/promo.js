@@ -154,7 +154,7 @@
       'Les souscriptions sont comptées à partir de votre numéro Wave (payeur), ' +
       'une fois confirmées. La réduction s\'applique à votre prochain forfait de ' +
       'la même tranche de prix et reste valable quelques jours : ' +
-      'pensez à en profiter ! Pas besoin de compte.');
+      'pensez à en profiter !.');
 
     var actions = el('div', 'promo-actions');
 
