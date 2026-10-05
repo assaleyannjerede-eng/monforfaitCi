@@ -1,0 +1,57 @@
+/* =========================================================
+   unites.css — Section « Transfert d'unités » du formulaire
+   ========================================================= */
+
+.accordion[hidden],
+.service-item[hidden] { display: none; }
+
+.unites-box { padding: 4px 2px 10px; }
+
+.unites-intro {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #cbd5e1;
+}
+
+.unites-chips {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.unites-chip {
+  padding: 11px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.unites-chip:hover { background: rgba(255, 255, 255, 0.1); }
+.unites-chip:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.unites-chip.is-active {
+  background: var(--accent, #ffd400);
+  border-color: var(--accent, #ffd400);
+  color: #042;
+}
+
+.unites-total {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e2e8f0;
+  background: rgba(255, 212, 0, 0.1);
+  border: 1px dashed rgba(255, 212, 0, 0.45);
+}
+.unites-total[hidden] { display: none; }
+.unites-total strong { color: var(--accent, #ffd400); font-size: 15px; }
+
+@media (min-width: 420px) {
+  .unites-chips { grid-template-columns: repeat(4, 1fr); }
+}
