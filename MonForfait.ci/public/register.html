@@ -23,13 +23,7 @@
       <input type="text"     id="phone"    placeholder="+225 0101010101">
       <input type="email"    id="email"    placeholder="Email">
       <input type="password" id="password" placeholder="Mot de passe (min 8 caractères)">
-<div
-  class="h-captcha"
-  data-sitekey="79849334-5e9c-482e-9d6a-971e557e7a88"
-  data-callback="onHCaptchaSuccess"
-  data-expired-callback="onHCaptchaExpired"
-  data-error-callback="onHCaptchaError">
-</div>
+
       <!-- Bouton inscription : appelle register() dans app.js -->
       <button id="registerBtn">S'inscrire</button>
 
@@ -42,7 +36,7 @@
   <script src="js/supabase.js"></script>
   <!-- Donnees des forfaits (requis par app.js) -->
   <script src="js/forfaits.js"></script>
-  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+ 
   <!-- Logique principale (contient register()) -->
   <script src="js/app.js"></script>
 </body>
