@@ -9,7 +9,6 @@
  * - Historique localStorage
  * - Supabase pour les transactions
  * - Authentification Supabase
- * - hCaptcha sur connexion et inscription
  * - Administration
  */
 
@@ -2420,20 +2419,6 @@ function demarrerRealtimeTransactions(uid) {
         }
 
 
-        /* ===========================
-           VERIFICATION HCAPTCHA
-           =========================== */
-
-        if (!hcaptchaToken) {
-
-          alert(
-            'Veuillez compléter le hCaptcha avant de vous inscrire.'
-          );
-
-          return;
-        }
-
-
         try {
 
           const {
@@ -2451,15 +2436,9 @@ function demarrerRealtimeTransactions(uid) {
                 data: {
                   name,
                   phone
-                },
-
-                captchaToken:
-                  hcaptchaToken
+                }
               }
             });
-
-
-          resetHCaptcha();
 
 
           if (error) {
@@ -2501,8 +2480,6 @@ function demarrerRealtimeTransactions(uid) {
 
 
         } catch (err) {
-
-          resetHCaptcha();
 
           console.error(
             '[MonForfait] Erreur inscription :',
@@ -2564,20 +2541,6 @@ function demarrerRealtimeTransactions(uid) {
       }
 
 
-      /* ===========================
-         VERIFICATION HCAPTCHA
-         =========================== */
-
-      if (!hcaptchaToken) {
-
-        alert(
-          'Veuillez compléter le hCaptcha avant de vous connecter.'
-        );
-
-        return;
-      }
-
-
       try {
 
         /* ===========================
@@ -2592,17 +2555,8 @@ function demarrerRealtimeTransactions(uid) {
 
             email,
 
-            password,
-
-            options: {
-
-              captchaToken:
-                hcaptchaToken
-            }
+            password
           });
-
-
-        resetHCaptcha();
 
 
         if (error) {
@@ -2688,8 +2642,6 @@ function demarrerRealtimeTransactions(uid) {
 
 
       } catch (err) {
-
-        resetHCaptcha();
 
         console.error(
           '[MonForfait] Erreur connexion :',
