@@ -96,12 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const panelInternet =
     document.getElementById('panel-internet');
 
-  const btnUnites =
-    document.getElementById('btn-unites');
-
-  const panelUnites =
-    document.getElementById('panel-unites');
-
   const closeModalBtn =
     document.getElementById('closeModal');
 
@@ -454,453 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
- 
-  /* =====================================================
-     TRANSFERT D'UNITES (montant rapide ou libre)
-     -----------------------------------------------------
-     Le client paie par Wave (montant + frais), un agent
-     envoie les unites au receveur. Comme pour les forfaits,
-     le SERVEUR valide le montant et calcule le prix (voir
-     supabase/005_transfert_unites.sql) : ici on affiche le
-     devis officiel (fonction units_quote) et on ouvre Wave.
-     ===================================================== */
-
-  const unitesMontantInput =
-    document.getElementById('unitesMontant');
-
-  const unitesHint =
-    document.getElementById('unitesHint');
-
-  const unitesTotal =
-    document.getElementById('unitesTotal');
-
-  const unitesChips =
-    Array.from(
-      document.querySelectorAll('.unites-chip')
-    );
-
-  let unitesConfig = null;       /* { enabled, min, max, taux } */
-  let unitesSeq = 0;
-  let unitesTimer = null;
-  let unitesPrixAffiche = null;  /* { montant, prix } vu par le client */
-
-  async function demanderDevisUnites(montant) {
-
-    if (!window.supabaseClient) {
-      throw new Error('Supabase indisponible.');
-    }
-
-    const { data, error } =
-      montant === undefined
-        ? await window.supabaseClient.rpc('units_quote')
-        : await window.supabaseClient.rpc(
-            'units_quote',
-            { p_montant: montant }
-          );
-
-    if (error) throw error;
-
-    return data;
-  }
-
-  function textePlageUnites() {
-
-    return unitesConfig
-      ? 'Minimum ' + formaterPrix(unitesConfig.min) +
-        ' · maximum ' + formaterPrix(unitesConfig.max)
-      : '';
-  }
-
-  function afficherHintUnites(texte, erreur) {
-
-    if (!unitesHint) return;
-
-    unitesHint.textContent = texte;
-
-    unitesHint.style.color =
-      erreur ? '#f87171' : '';
-  }
-
-  function afficherTotalUnites(montant, prix) {
-
-    if (!unitesTotal) return;
-
-    unitesTotal.replaceChildren();
-
-    unitesTotal.append('Vous payez ');
-
-    const fort =
-      document.createElement('strong');
-
-    fort.textContent = formaterPrix(prix);
-
-    unitesTotal.appendChild(fort);
-
-    unitesTotal.append(
-      ' (frais inclus). Le receveur reçoit ' +
-      formaterPrix(montant) + ' d\'unités.'
-    );
-
-    unitesTotal.hidden = false;
-  }
-
-  /* Texte brut saisi, ou null si le champ est vide */
-  function montantUnitesSaisi() {
-
-    const v =
-      unitesMontantInput
-        ? unitesMontantInput.value.trim()
-        : '';
-
-    return v === '' ? null : v;
-  }
-
-  function lireMontantUnites() {
-
-    const v = montantUnitesSaisi();
-
-    return v !== null && /^\d+$/.test(v)
-      ? parseInt(v, 10)
-      : NaN;
-  }
-
-  function reinitialiserUnitesUI() {
-
-    unitesSeq++;
-
-    clearTimeout(unitesTimer);
-
-    unitesPrixAffiche = null;
-
-    if (unitesMontantInput) {
-      unitesMontantInput.value = '';
-    }
-
-    unitesChips.forEach(c => {
-      c.classList.remove('is-active');
-      c.setAttribute('aria-pressed', 'false');
-    });
-
-    if (unitesTotal) {
-      unitesTotal.hidden = true;
-      unitesTotal.textContent = '';
-    }
-
-    afficherHintUnites(textePlageUnites(), false);
-  }
-
-  async function actualiserDevisUnites(seq) {
-
-    const montant = lireMontantUnites();
-
-    if (!Number.isInteger(montant)) {
-      afficherHintUnites('Entrez des chiffres uniquement.', true);
-      return;
-    }
-
-    let devis;
-
-    try {
-      devis = await demanderDevisUnites(montant);
-    } catch (err) {
-
-      console.warn('[MonForfait] Devis unites indisponible :', err);
-
-      if (seq === unitesSeq) {
-        afficherHintUnites(
-          'Impossible de calculer le prix pour le moment.',
-          true
-        );
-      }
-
-      return;
-    }
-
-    /* Réponse périmée : le client a déjà changé le montant */
-    if (seq !== unitesSeq) return;
-
-    if (!devis || !devis.valide) {
-
-      afficherHintUnites(
-        devis && devis.enabled === false
-          ? 'Le transfert d\'unités est momentanément indisponible.'
-          : 'Le montant doit être entre ' +
-            formaterPrix(devis.min) + ' et ' +
-            formaterPrix(devis.max) + '.',
-        true
-      );
-
-      return;
-    }
-
-    afficherHintUnites(textePlageUnites(), false);
-
-    unitesPrixAffiche = {
-      montant,
-      prix: Number(devis.prix)
-    };
-
-    afficherTotalUnites(montant, Number(devis.prix));
-  }
-
-  /* Le client a choisi / modifié un montant d'unités */
-  function surMontantUnitesModifie() {
-
-    /* Un seul choix à la fois : on décoche les forfaits. */
-    if (paymentForm) {
-      paymentForm
-        .querySelectorAll('input[name="forfait"]:checked')
-        .forEach(r => { r.checked = false; });
-    }
-
-    reinitialiserBonusUI();
-
-    const v = montantUnitesSaisi();
-
-    unitesChips.forEach(c => {
-
-      const actif =
-        v !== null && c.dataset.montant === v;
-
-      c.classList.toggle('is-active', actif);
-
-      c.setAttribute(
-        'aria-pressed',
-        actif ? 'true' : 'false'
-      );
-    });
-
-    unitesPrixAffiche = null;
-
-    if (unitesTotal) {
-      unitesTotal.hidden = true;
-      unitesTotal.textContent = '';
-    }
-
-    clearTimeout(unitesTimer);
-
-    const seq = ++unitesSeq;
-
-    if (v === null) {
-      afficherHintUnites(textePlageUnites(), false);
-      return;
-    }
-
-    unitesTimer = setTimeout(
-      () => actualiserDevisUnites(seq),
-      350
-    );
-  }
-
-  if (unitesMontantInput) {
-
-    unitesMontantInput.addEventListener('input', () => {
-
-      unitesMontantInput.value =
-        unitesMontantInput.value.replace(/\D/g, '');
-
-      surMontantUnitesModifie();
-    });
-  }
-
-  unitesChips.forEach(chip => {
-
-    chip.addEventListener('click', () => {
-
-      if (unitesMontantInput) {
-        unitesMontantInput.value = chip.dataset.montant;
-      }
-
-      surMontantUnitesModifie();
-    });
-  });
-
-  /* Choisir un forfait annule le montant d'unités */
-  if (paymentForm) {
-
-    paymentForm.addEventListener('change', e => {
-
-      if (e.target && e.target.name === 'forfait') {
-        reinitialiserUnitesUI();
-      }
-    });
-  }
-
-  /* N'affiche la section que si le service est actif en base
-     (migration 005 exécutée et units_enabled = 'true'). */
-  async function chargerConfigUnites() {
-
-    try {
-
-      const cfg = await demanderDevisUnites();
-
-      if (cfg && cfg.enabled) {
-
-        unitesConfig = cfg;
-
-        if (btnUnites) btnUnites.hidden = false;
-
-        const svc =
-          document.getElementById('serviceUnites');
-
-        if (svc) svc.hidden = false;
-
-        afficherHintUnites(textePlageUnites(), false);
-      }
-
-    } catch (err) {
-
-      console.warn(
-        '[MonForfait] Transfert d\'unites indisponible :',
-        err
-      );
-    }
-  }
-
-  chargerConfigUnites();
-
-  async function soumettreUnites(payer, receveur) {
-
-    const montant = lireMontantUnites();
-
-    if (!Number.isInteger(montant)) {
-
-      formMessage.textContent =
-        'Entrez un montant d\'unités valide (chiffres uniquement).';
-
-      formMessage.style.color = '#f87171';
-
-      if (unitesMontantInput) unitesMontantInput.focus();
-
-      return;
-    }
-
-    /* Onglet Wave ouvert tout de suite : après un await, les
-       navigateurs bloqueraient le popup. */
-    const waveTab = window.open('', '_blank');
-
-    if (waveTab) {
-      try { waveTab.opener = null; } catch {}
-    }
-
-    disableForm(true);
-
-    formMessage.textContent = 'Vérification du montant…';
-
-    formMessage.style.color = '#9aa6b2';
-
-    let devis;
-
-    try {
-      devis = await demanderDevisUnites(montant);
-    } catch (err) {
-
-      console.error('[MonForfait] Devis unites impossible :', err);
-
-      if (waveTab) waveTab.close();
-
-      formMessage.textContent =
-        'Impossible de vérifier le montant pour le moment. Réessayez dans un instant.';
-
-      formMessage.style.color = '#f87171';
-
-      disableForm(false);
-
-      return;
-    }
-
-    if (!devis || !devis.valide) {
-
-      if (waveTab) waveTab.close();
-
-      formMessage.textContent =
-        devis && devis.enabled === false
-          ? 'Le transfert d\'unités est momentanément indisponible.'
-          : 'Le montant doit être entre ' +
-            formaterPrix(devis.min) + ' et ' +
-            formaterPrix(devis.max) + '.';
-
-      formMessage.style.color = '#f87171';
-
-      disableForm(false);
-
-      return;
-    }
-
-    const prix = Number(devis.prix);
-
-    const vu = unitesPrixAffiche;
-
-    /* Le client doit avoir vu le prix exact avant de payer. */
-    if (!vu || vu.montant !== montant || vu.prix !== prix) {
-
-      if (waveTab) waveTab.close();
-
-      unitesPrixAffiche = { montant, prix };
-
-      afficherTotalUnites(montant, prix);
-
-      formMessage.textContent =
-        'Vérifiez le montant à payer : ' + formaterPrix(prix) +
-        '. Cliquez à nouveau sur Payer pour confirmer.';
-
-      formMessage.style.color = '#fbbf24';
-
-      disableForm(false);
-
-      return;
-    }
-
-    const WAVE_URL =
-      'https://pay.wave.com/m/M_ci_2kDAe7GPVh9b/c/ci/?amount=' +
-      encodeURIComponent(prix);
-
-    if (waveTab) {
-      waveTab.location.href = WAVE_URL;
-    } else {
-      window.open(WAVE_URL, '_blank');
-    }
-
-    const payload =
-      buildPayload({
-
-        operateur:
-          currentOperateur,
-
-        payer,
-
-        receveur,
-
-        forfaitCode:
-          'unites_' + currentOperateur.toLowerCase(),
-
-        forfaitLabel:
-          'Transfert d\'unités ' + formaterPrix(montant),
-
-        prix,
-
-        unitesMontant: montant,
-
-        isBonus: false
-      });
-
-    formMessage.textContent =
-      'Demande enregistrée ! Ref : ' +
-      payload.transactionId +
-      '. Confirmation après validation.';
-
-    formMessage.style.color = '#34d399';
-
-    addTransactionToHistory(payload);
-
-    disableForm(true);
-
-    setTimeout(
-      () => disableForm(false),
-      1500
-    );
-  }
-
   /* =====================================================
      GENERATION DYNAMIQUE DES FORFAITS
      ===================================================== */
@@ -1228,16 +775,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       right.appendChild(
         makeSpan(
-          it.isBonus
-            ? '🎁 Offert'
-            : it.prix
-              ? it.prix + ' F' +
-                (it.reductionPct
-                  ? ' (−' + it.reductionPct + ' %)'
-                  : '')
-              : '',
-          'font-size:12px;color:' +
-            ((it.isBonus || it.reductionPct) ? '#34d399;font-weight:700' : '#cbd5e1')
+          it.prix
+            ? it.prix + ' F'
+            : '',
+          'font-size:12px;color:#cbd5e1'
         )
       );
 
@@ -1492,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'aria-expanded'
       ) === 'true';
 
-    [btnAppels, btnInternet, btnUnites]
+    [btnAppels, btnInternet]
       .forEach(b => {
 
         if (b) {
@@ -1503,7 +1044,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-    [panelAppels, panelInternet, panelUnites]
+    [panelAppels, panelInternet]
       .forEach(p => {
 
         if (p) {
@@ -1553,17 +1094,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleAccordion(
           btnInternet,
           panelInternet
-        )
-    );
-  }
-
-  if (btnUnites) {
-    btnUnites.addEventListener(
-      'click',
-      () =>
-        toggleAccordion(
-          btnUnites,
-          panelUnites
         )
     );
   }
@@ -1676,10 +1206,6 @@ document.addEventListener('DOMContentLoaded', () => {
       paymentForm.reset();
     }
 
-    reinitialiserBonusUI();
-
-    reinitialiserUnitesUI();
-
     if (formMessage) {
 
       formMessage.textContent = '';
@@ -1688,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         '#ffd700';
     }
 
-    [btnAppels, btnInternet, btnUnites]
+    [btnAppels, btnInternet]
       .forEach(b => {
 
         if (b) {
@@ -1699,7 +1225,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-    [panelAppels, panelInternet, panelUnites]
+    [panelAppels, panelInternet]
       .forEach(p => {
 
         if (p) {
@@ -1819,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'modal-open'
       );
 
-      [btnAppels, btnInternet, btnUnites]
+      [btnAppels, btnInternet]
         .forEach(b => {
 
           if (b) {
@@ -1830,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-      [panelAppels, panelInternet, panelUnites]
+      [panelAppels, panelInternet]
         .forEach(p => {
 
           if (p) {
@@ -1849,7 +1375,6 @@ document.addEventListener('DOMContentLoaded', () => {
       /* --- Racheter : on préremplit numéros + forfait --- */
       if (prefill) {
         appliquerPrefill(prefill);
-        planifierBonus();
       }
 
       const formScroll =
@@ -1894,36 +1419,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (receveurNumero && prefill.receveur) {
       receveurNumero.value = prefill.receveur;
-    }
-
-    /* Transfert d'unités : on remet le même montant */
-    if (prefill.unitesMontant) {
-
-      if (!unitesConfig || !unitesMontantInput) {
-
-        formMessage.textContent =
-          'Le transfert d\'unités n\'est plus disponible.';
-
-        formMessage.style.color =
-          '#fbbf24';
-
-        return;
-      }
-
-      toggleAccordion(btnUnites, panelUnites);
-
-      unitesMontantInput.value =
-        String(prefill.unitesMontant);
-
-      surMontantUnitesModifie();
-
-      formMessage.textContent =
-        'Votre achat précédent est prérempli. Vérifiez puis payez.';
-
-      formMessage.style.color =
-        '#cbd5e1';
-
-      return;
     }
 
     const radio =
@@ -1998,28 +1493,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!tx || !tx.operateur) return;
 
-    const estUnites =
-      typeof tx.forfaitCode === 'string' &&
-      tx.forfaitCode.startsWith('unites_');
-
-    /* Montant d'unités : colonne en base, sinon lu dans le libellé */
-    const unitesMontant =
-      estUnites
-        ? (Number(tx.unitesMontant) ||
-           parseInt(
-             String(tx.forfaitLabel || '').replace(/\D/g, ''),
-             10
-           ) || 0)
-        : 0;
-
     window.ouvrirModal(
       tx.operateur,
       {
         payer: tx.payer,
         receveur: tx.receveur,
         forfaitCode: tx.forfaitCode,
-        ancienPrix: tx.prix,
-        unitesMontant
+        ancienPrix: tx.prix
       }
     );
   }
@@ -2115,15 +1595,6 @@ document.addEventListener('DOMContentLoaded', () => {
       prix:
         data.prix,
 
-      isBonus:
-        !!data.isBonus,
-
-      reductionPct:
-        Number(data.reductionPct) || 0,
-
-      unitesMontant:
-        data.unitesMontant || null,
-
       status:
         'pending',
 
@@ -2208,13 +1679,6 @@ document.addEventListener('DOMContentLoaded', () => {
         meta:
           tx.meta
       };
-
-      /* Colonne propre aux transferts d'unités : envoyée seulement
-         dans ce cas (le trigger SQL revalide le montant). */
-      if (tx.unitesMontant) {
-        supabasePayload.unites_montant =
-          tx.unitesMontant;
-      }
 
       window.supabaseClient
         .from('transactions')
@@ -2330,18 +1794,10 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        /* Transfert d'unités : montant rapide ou saisi librement */
-        if (montantUnitesSaisi() !== null) {
-
-          await soumettreUnites(payer, receveur);
-
-          return;
-        }
-
         if (!forfaitInput) {
 
           formMessage.textContent =
-            'Veuillez sélectionner un forfait ou un montant d\'unités.';
+            'Veuillez sélectionner un forfait.';
 
           formMessage.style.color =
             '#f87171';
@@ -2467,43 +1923,6 @@ document.addEventListener('DOMContentLoaded', () => {
            WAVE
            ================================================= */
 
-        /* BONUS FIDELITE : réduction disponible ? Le serveur applique
-           la même règle à l'enregistrement (le navigateur seul ne
-           peut jamais baisser le prix). */
-        const etatBonus =
-          await obtenirEtatBonus(
-            payer,
-            forfaitInput.value
-          );
-
-        if (etatBonus && etatBonus.erreur) {
-
-          /* Mieux vaut ne rien faire que faire payer plein tarif
-             un client qui avait droit à sa réduction. */
-          if (waveTab) waveTab.close();
-
-          formMessage.textContent =
-            'Impossible de vérifier votre offre fidélité. Réessayez dans un instant.';
-
-          formMessage.style.color =
-            '#f87171';
-
-          disableForm(false);
-
-          return;
-        }
-
-        const reductionPct =
-          (etatBonus && etatBonus.coupon)
-            ? Number(etatBonus.reduction_pct) || 0
-            : 0;
-
-        if (reductionPct > 0) {
-
-          /* Prix réduit calculé par le serveur (frais inclus) */
-          prix = Number(etatBonus.prix_final);
-        }
-
         const montantWave =
           Number.isFinite(prix) &&
           prix > 0
@@ -2541,21 +1960,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             forfaitLabel,
 
-            prix,
-
-            reductionPct
+            prix
           });
 
         formMessage.textContent =
-          reductionPct > 0
-            ? '🎁 Réduction de −' + reductionPct +
-              ' % appliquée (' + formaterPrix(prix) +
-              '). Demande enregistrée. Ref : ' +
-              payload.transactionId +
-              '. Confirmation après validation.'
-            : 'Demande enregistrée ! Ref : ' +
-              payload.transactionId +
-              '. Confirmation après validation.';
+          'Demande enregistrée ! Ref : ' +
+          payload.transactionId +
+          '. Confirmation après validation.';
 
         formMessage.style.color =
           '#34d399';
@@ -2563,8 +1974,6 @@ document.addEventListener('DOMContentLoaded', () => {
         addTransactionToHistory(
           payload
         );
-
-        reinitialiserBonusUI();
 
         disableForm(true);
 
@@ -2764,9 +2173,6 @@ async function synchroniserHistoriqueSupabase() {
       forfaitLabel: tx.forfait_label,
       prix: tx.prix,
       status: tx.status,
-      isBonus: !!tx.is_bonus,
-      reductionPct: Number(tx.reduction_pct) || 0,
-      unitesMontant: tx.unites_montant || null,
       meta: tx.meta || {}
     }));
 
@@ -2845,12 +2251,6 @@ function demarrerRealtimeTransactions(uid) {
               updated.prix,
             status:
               updated.status,
-            isBonus:
-              !!updated.is_bonus,
-            reductionPct:
-              Number(updated.reduction_pct) || 0,
-            unitesMontant:
-              updated.unites_montant || null,
             meta:
               updated.meta || {}
           };
@@ -2872,46 +2272,8 @@ function demarrerRealtimeTransactions(uid) {
           afficherHistorique();
 
           if (updated.status === 'confirmed') {
-
-            /* Le serveur écrit meta.bonus_gagne quand cette
-               souscription fait gagner une réduction fidélité. */
-            const gain =
-              updated.meta?.bonus_gagne;
-
-            let msgGain = '';
-
-            if (gain && gain.reduction_pct) {
-
-              const fin =
-                gain.expires_at
-                  ? new Date(gain.expires_at)
-                  : null;
-
-              const finTxt =
-                fin && !isNaN(fin.getTime())
-                  ? ' jusqu\'au ' +
-                    fin.toLocaleString('fr-FR', {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'long',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    }).replace(',', '').replace(':', 'h')
-                  : ' pendant ' +
-                    (gain.validite_jours || 3) +
-                    ' jours';
-
-              msgGain =
-                '\n\n🎁 Bravo ! Vous avez gagné −' +
-                gain.reduction_pct +
-                ' % sur votre prochain forfait de ' +
-                Number(gain.prix_normal).toLocaleString('fr-FR') +
-                '\u00a0F, valable' + finTxt + '.';
-            }
-
             alert(
-              '✅ Votre souscription a été acceptée !' +
-              msgGain
+              '✅ Votre souscription a été acceptée !'
             );
           }
 
@@ -2960,6 +2322,7 @@ function demarrerRealtimeTransactions(uid) {
   window.__mfStartRealtime = demarrerRealtimeTransactions;
 
 });
+
 
 
 
@@ -3057,7 +2420,118 @@ function demarrerRealtimeTransactions(uid) {
         }
 
 
-        
+        /* ===========================
+           VERIFICATION HCAPTCHA
+           =========================== */
+
+        if (!hcaptchaToken) {
+
+          alert(
+            'Veuillez compléter le hCaptcha avant de vous inscrire.'
+          );
+
+          return;
+        }
+
+
+        try {
+
+          const {
+            data,
+            error
+          } =
+            await supabase.auth.signUp({
+
+              email,
+
+              password,
+
+              options: {
+
+                data: {
+                  name,
+                  phone
+                },
+
+                captchaToken:
+                  hcaptchaToken
+              }
+            });
+
+
+          resetHCaptcha();
+
+
+          if (error) {
+            throw error;
+          }
+
+
+          if (data.user) {
+
+            localStorage.setItem(
+
+              'mf_profile_' +
+                data.user.id,
+
+              JSON.stringify({
+
+                uid:
+                  data.user.id,
+
+                name,
+
+                email,
+
+                phone
+              })
+            );
+          }
+
+
+          alert(
+            data.session
+              ? 'Inscription réussie !'
+              : 'Inscription réussie ! Vérifiez votre email avant de vous connecter.'
+          );
+
+
+          window.location.href =
+            'index.html';
+
+
+        } catch (err) {
+
+          resetHCaptcha();
+
+          console.error(
+            '[MonForfait] Erreur inscription :',
+            err
+          );
+
+          alert(
+            err.message ||
+            "Erreur lors de l'inscription."
+          );
+        }
+      };
+
+
+    const registerBtn =
+      document.getElementById(
+        'registerBtn'
+      );
+
+
+    if (registerBtn) {
+
+      registerBtn.addEventListener(
+        'click',
+        () => window.register()
+      );
+    }
+  }
+
 
   /* =====================================================
      CONNEXION
@@ -3090,7 +2564,21 @@ function demarrerRealtimeTransactions(uid) {
       }
 
 
-     
+      /* ===========================
+         VERIFICATION HCAPTCHA
+         =========================== */
+
+      if (!hcaptchaToken) {
+
+        alert(
+          'Veuillez compléter le hCaptcha avant de vous connecter.'
+        );
+
+        return;
+      }
+
+
+      try {
 
         /* ===========================
            CONNEXION SUPABASE
@@ -3106,6 +2594,11 @@ function demarrerRealtimeTransactions(uid) {
 
             password,
 
+            options: {
+
+              captchaToken:
+                hcaptchaToken
+            }
           });
 
 
