@@ -383,6 +383,23 @@ document.addEventListener('DOMContentLoaded', () => {
     return td;
   }
 
+  // Souscription programmée : le client a DÉJÀ payé, l'agent doit exécuter
+  // à cette date. Valeur non fiable (meta vient du navigateur) : on ne
+  // l'affiche que si c'est une date valide, et toujours via textContent.
+  function programmeDate(tx) {
+    const v = tx && tx.meta && tx.meta.programme_pour;
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatProgramme(d) {
+    return d.toLocaleString('fr-FR', {
+      weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
   function renderTransactions() {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const page  = filteredTransactions.slice(start, start + ITEMS_PER_PAGE);
@@ -436,16 +453,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!AGENT_MODE) {
         row.appendChild(makeCell(tx.operateur || '—'));
       }
-      row.appendChild(makeCell(tx.forfaitLabel || tx.forfaitCode || '—'));
+      const forfaitTd = makeCell(tx.forfaitLabel || tx.forfaitCode || '—');
+      const dProg = programmeDate(tx);
+      if (dProg) {
+        forfaitTd.appendChild(document.createElement('br'));
+        const badge = document.createElement('strong');
+        badge.textContent = '⏰ À exécuter le ' + formatProgramme(dProg);
+        badge.style.cssText = 'color:#fbbf24;font-size:12px';
+        forfaitTd.appendChild(badge);
+      }
+      row.appendChild(forfaitTd);
       row.appendChild(makeCell(tx.payer || '—'));
       row.appendChild(makeCell(tx.receveur || '—'));
-      row.appendChild(makeCell(
-        tx.is_bonus
-          ? '🎁 OFFERT (0 F)'
-          : (tx.reduction_pct > 0
-              ? formatCurrency(tx.prix) + ' 🎁 −' + tx.reduction_pct + ' %'
-              : formatCurrency(tx.prix))
-      ));
+      row.appendChild(makeCell(formatCurrency(tx.prix)));
 
       const statusTd = document.createElement('td');
       const statusBadge = document.createElement('span');
@@ -549,16 +569,13 @@ document.addEventListener('DOMContentLoaded', () => {
     addDetailItem(detailsContent, 'Date', formatDate(tx.date));
     addDetailItem(detailsContent, 'Opérateur', tx.operateur || '—');
     addDetailItem(detailsContent, 'Forfait', tx.forfaitLabel || tx.forfaitCode || '—');
+    const dProgDetail = programmeDate(tx);
+    if (dProgDetail) {
+      addDetailItem(detailsContent, '⏰ À exécuter le', formatProgramme(dProgDetail) + ' (déjà payé par le client)');
+    }
     addDetailItem(detailsContent, 'Payeur', tx.payer || '—');
     addDetailItem(detailsContent, 'Bénéficiaire', tx.receveur || '—');
-    addDetailItem(
-      detailsContent, 'Montant',
-      tx.is_bonus
-        ? '🎁 OFFERT — aucun paiement Wave à vérifier'
-        : (tx.reduction_pct > 0
-            ? formatCurrency(tx.prix) + ' — réduction fidélité −' + tx.reduction_pct + ' % déjà appliquée (montant Wave à vérifier : ' + formatCurrency(tx.prix) + ')'
-            : formatCurrency(tx.prix))
-    );
+    addDetailItem(detailsContent, 'Montant', formatCurrency(tx.prix));
     addDetailItem(
       detailsContent, 'Statut',
       tx.status === 'pending' ? 'En attente' : tx.status === 'confirmed' ? 'Confirmé' : 'Échoué',
@@ -699,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
     filteredTransactions.forEach(function(tx) {
       csv += '"' + tx.transactionId + '","' + formatDate(tx.date) + '","' + tx.operateur + '","' +
         (tx.forfaitLabel || tx.forfaitCode) + '","' + tx.payer + '","' + tx.receveur + '","' +
-        (tx.is_bonus ? 'OFFERT' : (tx.prix || '')) + '","' + tx.status + '"\n';
+        (tx.prix || '') + '","' + tx.status + '"\n';
     });
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     var link = document.createElement('a');
