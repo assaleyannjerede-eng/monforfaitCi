@@ -23,9 +23,11 @@
       <input type="text"     id="phone"    placeholder="+225 0101010101">
       <input type="email"    id="email"    placeholder="Email">
       <input type="password" id="password" placeholder="Mot de passe (min 8 caractères)">
-      <!-- Bouton inscription : appelle register() dans app.js -->
+      <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" aria-label="Afficher ou masquer le mot de passe">Afficher le mot de passe</button>
+<!-- Bouton inscription : appelle register() dans app.js -->
       <button id="registerBtn">S'inscrire</button>
 
+      <p style="font-size:12px;opacity:.8;margin-top:10px">En vous inscrivant, vous acceptez nos <a href="conditions.html">Conditions d'utilisation</a> et notre <a href="confidentialite.html">Politique de confidentialité</a>.</p>
       <p>Déjà inscrit ? <a href="index.html">Connexion</a></p>
     </div>
   </div>
