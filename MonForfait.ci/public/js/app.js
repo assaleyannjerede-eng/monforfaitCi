@@ -9,6 +9,7 @@
  * - Historique localStorage
  * - Supabase pour les transactions
  * - Authentification Supabase
+ * - formulaires de connexion et inscription sans CAPTCHA
  * - Administration
  */
 
@@ -95,6 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const panelInternet =
     document.getElementById('panel-internet');
 
+  const btnUnites =
+    document.getElementById('btn-unites');
+
+  const panelUnites =
+    document.getElementById('panel-unites');
+
   const closeModalBtn =
     document.getElementById('closeModal');
 
@@ -118,6 +125,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentOperateur = 'MTN';
   let lastFocused = null;
+
+  /* Souscription programmée (js/programme.js) : le client PAIE MAINTENANT,
+     l'agent exécute à la date choisie. { pour: ISO, repeat } ou null. */
+  let programmeCourant = null;
+
+  function metaProgramme() {
+    return programmeCourant
+      ? { programme_pour: programmeCourant.pour }
+      : {};
+  }
+
+  /* Prévient programme.js que la souscription programmée est payée
+     et enregistrée, puis remet le formulaire en mode « achat normal ». */
+  function signalerProgrammation(payload) {
+
+    if (!programmeCourant) return;
+
+    try {
+      document.dispatchEvent(
+        new CustomEvent('mf:souscription-programmee', {
+          detail: {
+            transactionId: payload.transactionId,
+            operateur: payload.operateur,
+            payer: payload.payer,
+            receveur: payload.receveur,
+            forfaitCode: payload.forfaitCode,
+            forfaitLabel: payload.forfaitLabel,
+            unitesMontant: payload.unitesMontant || 0,
+            programmePour: programmeCourant.pour,
+            repeat: programmeCourant.repeat
+          }
+        })
+      );
+    } catch (err) {
+      console.warn('[MonForfait] Événement programmation :', err);
+    }
+
+    programmeCourant = null;
+    majBandeauProgramme();
+  }
+
+  function majBandeauProgramme() {
+
+    const b = document.getElementById('progPayBanner');
+
+    if (!b) return;
+
+    if (!programmeCourant) {
+      b.hidden = true;
+      b.textContent = '';
+      return;
+    }
+
+    const d = new Date(programmeCourant.pour);
+
+    b.textContent =
+      '⏰ Souscription programmée : vous payez maintenant, ' +
+      'l\'agent l\'exécutera le ' +
+      d.toLocaleString('fr-FR', {
+        day: 'numeric', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      }).replace(':', 'h') + '.';
+
+    b.hidden = false;
+  }
 
   /* =====================================================
      CLE LOCALSTORAGE PAR UTILISATEUR
@@ -448,6 +520,452 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* =====================================================
+     TRANSFERT D'UNITES (montant rapide ou libre)
+     -----------------------------------------------------
+     Le client paie par Wave (montant + frais), un agent
+     envoie les unites au receveur. Comme pour les forfaits,
+     le SERVEUR valide le montant et calcule le prix (voir
+     supabase/005_transfert_unites.sql) : ici on affiche le
+     devis officiel (fonction units_quote) et on ouvre Wave.
+     ===================================================== */
+
+  const unitesMontantInput =
+    document.getElementById('unitesMontant');
+
+  const unitesHint =
+    document.getElementById('unitesHint');
+
+  const unitesTotal =
+    document.getElementById('unitesTotal');
+
+  const unitesChips =
+    Array.from(
+      document.querySelectorAll('.unites-chip')
+    );
+
+  let unitesConfig = null;       /* { enabled, min, max, taux } */
+  let unitesSeq = 0;
+  let unitesTimer = null;
+  let unitesPrixAffiche = null;  /* { montant, prix } vu par le client */
+
+  async function demanderDevisUnites(montant) {
+
+    if (!window.supabaseClient) {
+      throw new Error('Supabase indisponible.');
+    }
+
+    const { data, error } =
+      montant === undefined
+        ? await window.supabaseClient.rpc('units_quote')
+        : await window.supabaseClient.rpc(
+            'units_quote',
+            { p_montant: montant }
+          );
+
+    if (error) throw error;
+
+    return data;
+  }
+
+  function textePlageUnites() {
+
+    return unitesConfig
+      ? 'Minimum ' + formaterPrix(unitesConfig.min) +
+        ' · maximum ' + formaterPrix(unitesConfig.max)
+      : '';
+  }
+
+  function afficherHintUnites(texte, erreur) {
+
+    if (!unitesHint) return;
+
+    unitesHint.textContent = texte;
+
+    unitesHint.style.color =
+      erreur ? '#f87171' : '';
+  }
+
+  function afficherTotalUnites(montant, prix) {
+
+    if (!unitesTotal) return;
+
+    unitesTotal.replaceChildren();
+
+    unitesTotal.append('Vous payez ');
+
+    const fort =
+      document.createElement('strong');
+
+    fort.textContent = formaterPrix(prix);
+
+    unitesTotal.appendChild(fort);
+
+    unitesTotal.append(
+      ' (frais inclus). Le receveur reçoit ' +
+      formaterPrix(montant) + ' d\'unités.'
+    );
+
+    unitesTotal.hidden = false;
+  }
+
+  /* Texte brut saisi, ou null si le champ est vide */
+  function montantUnitesSaisi() {
+
+    const v =
+      unitesMontantInput
+        ? unitesMontantInput.value.trim()
+        : '';
+
+    return v === '' ? null : v;
+  }
+
+  function lireMontantUnites() {
+
+    const v = montantUnitesSaisi();
+
+    return v !== null && /^\d+$/.test(v)
+      ? parseInt(v, 10)
+      : NaN;
+  }
+
+  function reinitialiserUnitesUI() {
+
+    unitesSeq++;
+
+    clearTimeout(unitesTimer);
+
+    unitesPrixAffiche = null;
+
+    if (unitesMontantInput) {
+      unitesMontantInput.value = '';
+    }
+
+    unitesChips.forEach(c => {
+      c.classList.remove('is-active');
+      c.setAttribute('aria-pressed', 'false');
+    });
+
+    if (unitesTotal) {
+      unitesTotal.hidden = true;
+      unitesTotal.textContent = '';
+    }
+
+    afficherHintUnites(textePlageUnites(), false);
+  }
+
+  async function actualiserDevisUnites(seq) {
+
+    const montant = lireMontantUnites();
+
+    if (!Number.isInteger(montant)) {
+      afficherHintUnites('Entrez des chiffres uniquement.', true);
+      return;
+    }
+
+    let devis;
+
+    try {
+      devis = await demanderDevisUnites(montant);
+    } catch (err) {
+
+      console.warn('[MonForfait] Devis unites indisponible :', err);
+
+      if (seq === unitesSeq) {
+        afficherHintUnites(
+          'Impossible de calculer le prix pour le moment.',
+          true
+        );
+      }
+
+      return;
+    }
+
+    /* Réponse périmée : le client a déjà changé le montant */
+    if (seq !== unitesSeq) return;
+
+    if (!devis || !devis.valide) {
+
+      afficherHintUnites(
+        devis && devis.enabled === false
+          ? 'Le transfert d\'unités est momentanément indisponible.'
+          : 'Le montant doit être entre ' +
+            formaterPrix(devis.min) + ' et ' +
+            formaterPrix(devis.max) + '.',
+        true
+      );
+
+      return;
+    }
+
+    afficherHintUnites(textePlageUnites(), false);
+
+    unitesPrixAffiche = {
+      montant,
+      prix: Number(devis.prix)
+    };
+
+    afficherTotalUnites(montant, Number(devis.prix));
+  }
+
+  /* Le client a choisi / modifié un montant d'unités */
+  function surMontantUnitesModifie() {
+
+    /* Un seul choix à la fois : on décoche les forfaits. */
+    if (paymentForm) {
+      paymentForm
+        .querySelectorAll('input[name="forfait"]:checked')
+        .forEach(r => { r.checked = false; });
+    }
+
+    const v = montantUnitesSaisi();
+
+    unitesChips.forEach(c => {
+
+      const actif =
+        v !== null && c.dataset.montant === v;
+
+      c.classList.toggle('is-active', actif);
+
+      c.setAttribute(
+        'aria-pressed',
+        actif ? 'true' : 'false'
+      );
+    });
+
+    unitesPrixAffiche = null;
+
+    if (unitesTotal) {
+      unitesTotal.hidden = true;
+      unitesTotal.textContent = '';
+    }
+
+    clearTimeout(unitesTimer);
+
+    const seq = ++unitesSeq;
+
+    if (v === null) {
+      afficherHintUnites(textePlageUnites(), false);
+      return;
+    }
+
+    unitesTimer = setTimeout(
+      () => actualiserDevisUnites(seq),
+      350
+    );
+  }
+
+  if (unitesMontantInput) {
+
+    unitesMontantInput.addEventListener('input', () => {
+
+      unitesMontantInput.value =
+        unitesMontantInput.value.replace(/\D/g, '');
+
+      surMontantUnitesModifie();
+    });
+  }
+
+  unitesChips.forEach(chip => {
+
+    chip.addEventListener('click', () => {
+
+      if (unitesMontantInput) {
+        unitesMontantInput.value = chip.dataset.montant;
+      }
+
+      surMontantUnitesModifie();
+    });
+  });
+
+  /* Choisir un forfait annule le montant d'unités */
+  if (paymentForm) {
+
+    paymentForm.addEventListener('change', e => {
+
+      if (e.target && e.target.name === 'forfait') {
+        reinitialiserUnitesUI();
+      }
+    });
+  }
+
+  /* N'affiche la section que si le service est actif en base
+     (migration 005 exécutée et units_enabled = 'true'). */
+  async function chargerConfigUnites() {
+
+    try {
+
+      const cfg = await demanderDevisUnites();
+
+      if (cfg && cfg.enabled) {
+
+        unitesConfig = cfg;
+
+        if (btnUnites) btnUnites.hidden = false;
+
+        const svc =
+          document.getElementById('serviceUnites');
+
+        if (svc) svc.hidden = false;
+
+        afficherHintUnites(textePlageUnites(), false);
+      }
+
+    } catch (err) {
+
+      console.warn(
+        '[MonForfait] Transfert d\'unites indisponible :',
+        err
+      );
+    }
+  }
+
+  chargerConfigUnites();
+
+  async function soumettreUnites(payer, receveur) {
+
+    const montant = lireMontantUnites();
+
+    if (!Number.isInteger(montant)) {
+
+      formMessage.textContent =
+        'Entrez un montant d\'unités valide (chiffres uniquement).';
+
+      formMessage.style.color = '#f87171';
+
+      if (unitesMontantInput) unitesMontantInput.focus();
+
+      return;
+    }
+
+    /* Onglet Wave ouvert tout de suite : après un await, les
+       navigateurs bloqueraient le popup. */
+    const waveTab = window.open('', '_blank');
+
+    if (waveTab) {
+      try { waveTab.opener = null; } catch {}
+    }
+
+    disableForm(true);
+
+    formMessage.textContent = 'Vérification du montant…';
+
+    formMessage.style.color = '#9aa6b2';
+
+    let devis;
+
+    try {
+      devis = await demanderDevisUnites(montant);
+    } catch (err) {
+
+      console.error('[MonForfait] Devis unites impossible :', err);
+
+      if (waveTab) waveTab.close();
+
+      formMessage.textContent =
+        'Impossible de vérifier le montant pour le moment. Réessayez dans un instant.';
+
+      formMessage.style.color = '#f87171';
+
+      disableForm(false);
+
+      return;
+    }
+
+    if (!devis || !devis.valide) {
+
+      if (waveTab) waveTab.close();
+
+      formMessage.textContent =
+        devis && devis.enabled === false
+          ? 'Le transfert d\'unités est momentanément indisponible.'
+          : 'Le montant doit être entre ' +
+            formaterPrix(devis.min) + ' et ' +
+            formaterPrix(devis.max) + '.';
+
+      formMessage.style.color = '#f87171';
+
+      disableForm(false);
+
+      return;
+    }
+
+    const prix = Number(devis.prix);
+
+    const vu = unitesPrixAffiche;
+
+    /* Le client doit avoir vu le prix exact avant de payer. */
+    if (!vu || vu.montant !== montant || vu.prix !== prix) {
+
+      if (waveTab) waveTab.close();
+
+      unitesPrixAffiche = { montant, prix };
+
+      afficherTotalUnites(montant, prix);
+
+      formMessage.textContent =
+        'Vérifiez le montant à payer : ' + formaterPrix(prix) +
+        '. Cliquez à nouveau sur Payer pour confirmer.';
+
+      formMessage.style.color = '#fbbf24';
+
+      disableForm(false);
+
+      return;
+    }
+
+    const WAVE_URL =
+      'https://pay.wave.com/m/M_ci_2kDAe7GPVh9b/c/ci/?amount=' +
+      encodeURIComponent(prix);
+
+    if (waveTab) {
+      waveTab.location.href = WAVE_URL;
+    } else {
+      window.open(WAVE_URL, '_blank');
+    }
+
+    const payload =
+      buildPayload({
+
+        operateur:
+          currentOperateur,
+
+        payer,
+
+        receveur,
+
+        forfaitCode:
+          'unites_' + currentOperateur.toLowerCase(),
+
+        forfaitLabel:
+          'Transfert d\'unités ' + formaterPrix(montant),
+
+        prix,
+
+        unitesMontant: montant,
+
+        meta: metaProgramme()
+      });
+
+    formMessage.textContent =
+      'Demande enregistrée ! Ref : ' +
+      payload.transactionId +
+      '. Confirmation après validation.';
+
+    formMessage.style.color = '#34d399';
+
+    addTransactionToHistory(payload);
+
+    signalerProgrammation(payload);
+
+    disableForm(true);
+
+    setTimeout(
+      () => disableForm(false),
+      1500
+    );
+  }
+
+  /* =====================================================
      GENERATION DYNAMIQUE DES FORFAITS
      ===================================================== */
 
@@ -756,6 +1274,25 @@ document.addEventListener('DOMContentLoaded', () => {
         )
       );
 
+      if (it.meta && it.meta.programme_pour) {
+
+        const dp = new Date(it.meta.programme_pour);
+
+        if (!isNaN(dp.getTime())) {
+
+          left.appendChild(
+            makeSpan(
+              '⏰ Exécution prévue le ' +
+              dp.toLocaleString('fr-FR', {
+                day: 'numeric', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              }).replace(':', 'h'),
+              'font-size:12px;color:#fbbf24;font-weight:700'
+            )
+          );
+        }
+      }
+
       const right =
         document.createElement('div');
 
@@ -774,9 +1311,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       right.appendChild(
         makeSpan(
-          it.prix
-            ? it.prix + ' F'
-            : '',
+          it.prix ? it.prix + ' F' : '',
           'font-size:12px;color:#cbd5e1'
         )
       );
@@ -1032,7 +1567,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'aria-expanded'
       ) === 'true';
 
-    [btnAppels, btnInternet]
+    [btnAppels, btnInternet, btnUnites]
       .forEach(b => {
 
         if (b) {
@@ -1043,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-    [panelAppels, panelInternet]
+    [panelAppels, panelInternet, panelUnites]
       .forEach(p => {
 
         if (p) {
@@ -1093,6 +1628,17 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleAccordion(
           btnInternet,
           panelInternet
+        )
+    );
+  }
+
+  if (btnUnites) {
+    btnUnites.addEventListener(
+      'click',
+      () =>
+        toggleAccordion(
+          btnUnites,
+          panelUnites
         )
     );
   }
@@ -1205,6 +1751,8 @@ document.addEventListener('DOMContentLoaded', () => {
       paymentForm.reset();
     }
 
+    reinitialiserUnitesUI();
+
     if (formMessage) {
 
       formMessage.textContent = '';
@@ -1213,7 +1761,7 @@ document.addEventListener('DOMContentLoaded', () => {
         '#ffd700';
     }
 
-    [btnAppels, btnInternet]
+    [btnAppels, btnInternet, btnUnites]
       .forEach(b => {
 
         if (b) {
@@ -1224,7 +1772,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-    [panelAppels, panelInternet]
+    [panelAppels, panelInternet, panelUnites]
       .forEach(p => {
 
         if (p) {
@@ -1267,13 +1815,112 @@ document.addEventListener('DOMContentLoaded', () => {
      OUVRIR MODAL
      ===================================================== */
 
+  /* ---------------------------------------------------
+     MODE « WAVE DIRECT » (prefill.directWave)
+     Utilisé par la partie « Programmer » : le client a déjà tout saisi,
+     on ne lui montre pas un second modal. Le formulaire existant est
+     rempli puis soumis tout de suite (mêmes vérifications de prix
+     et même enregistrement qu'un achat normal),
+     ce qui ouvre Wave. Le modal reste invisible ; il n'apparaît que
+     si une vérification échoue, pour que le client voie le message.
+     --------------------------------------------------- */
+  function lancerWaveDirect() {
+
+    if (!paymentForm || !formMessage) return;
+
+    let fini = false;
+    let garde = null;
+    let obs = null;
+
+    function terminer(ok) {
+
+      if (fini) return;
+      fini = true;
+
+      if (obs) obs.disconnect();
+      clearTimeout(garde);
+
+      const message =
+        (formMessage.textContent || '').trim();
+
+      modal.classList.remove('mf-direct');
+
+      if (ok) {
+
+        /* Wave est ouvert et la demande enregistrée */
+        fermerModal();
+
+        try {
+          document.dispatchEvent(
+            new CustomEvent('mf:wave-direct', {
+              detail: { ok: true, message: message }
+            })
+          );
+        } catch {}
+
+        return;
+      }
+
+      /* Une vérification a échoué : on montre le modal avec son message */
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('modal-open');
+
+      setTimeout(() => {
+        updateFocusable();
+      }, 50);
+    }
+
+    function verifier() {
+
+      const t =
+        (formMessage.textContent || '').trim();
+
+      /* Message vide ou « Vérification… » : on attend la suite */
+      if (!t || /^Vérification/.test(t)) return;
+
+      terminer(t.includes('Demande enregistrée'));
+    }
+
+    formMessage.textContent = '';
+
+    obs = new MutationObserver(verifier);
+
+    obs.observe(formMessage, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+
+    /* Sécurité : si rien ne se passe, on affiche le modal */
+    garde = setTimeout(() => terminer(false), 15000);
+
+    /* Appelé dans le clic du client : le navigateur autorise
+       donc l'ouverture de l'onglet Wave. */
+    paymentForm.requestSubmit();
+  }
+
   /* prefill (optionnel, utilisé par « Racheter ») :
-       { payer, receveur, forfaitCode, ancienPrix } */
+       { payer, receveur, forfaitCode, ancienPrix, directWave } */
   window.ouvrirModal =
     function(op, prefill) {
 
+      const direct =
+        !!(prefill && prefill.directWave);
+
       currentOperateur =
         op || 'MTN';
+
+      programmeCourant =
+        (prefill &&
+         prefill.programmePour &&
+         !isNaN(new Date(prefill.programmePour).getTime()))
+          ? {
+              pour: new Date(prefill.programmePour).toISOString(),
+              repeat: prefill.repeat || 'once'
+            }
+          : null;
+
+      majBandeauProgramme();
 
       lastFocused =
         document.activeElement;
@@ -1330,21 +1977,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!modal) return;
 
+      /* Mode Wave direct : modal rempli mais invisible */
+      modal.classList.toggle(
+        'mf-direct',
+        direct
+      );
+
       modal.classList.remove(
         'hidden'
       );
 
       modal.setAttribute(
         'aria-hidden',
-        'false'
+        direct ? 'true' : 'false'
       );
 
       /* Empêche la page derrière de défiler */
-      document.body.classList.add(
-        'modal-open'
-      );
+      if (!direct) {
+        document.body.classList.add(
+          'modal-open'
+        );
+      }
 
-      [btnAppels, btnInternet]
+      [btnAppels, btnInternet, btnUnites]
         .forEach(b => {
 
           if (b) {
@@ -1355,7 +2010,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-      [panelAppels, panelInternet]
+      [panelAppels, panelInternet, panelUnites]
         .forEach(p => {
 
           if (p) {
@@ -1374,6 +2029,11 @@ document.addEventListener('DOMContentLoaded', () => {
       /* --- Racheter : on préremplit numéros + forfait --- */
       if (prefill) {
         appliquerPrefill(prefill);
+      }
+
+      if (direct) {
+        lancerWaveDirect();
+        return;
       }
 
       const formScroll =
@@ -1418,6 +2078,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (receveurNumero && prefill.receveur) {
       receveurNumero.value = prefill.receveur;
+    }
+
+    /* Transfert d'unités : on remet le même montant */
+    if (prefill.unitesMontant) {
+
+      if (!unitesConfig || !unitesMontantInput) {
+
+        formMessage.textContent =
+          'Le transfert d\'unités n\'est plus disponible.';
+
+        formMessage.style.color =
+          '#fbbf24';
+
+        return;
+      }
+
+      toggleAccordion(btnUnites, panelUnites);
+
+      unitesMontantInput.value =
+        String(prefill.unitesMontant);
+
+      surMontantUnitesModifie();
+
+      formMessage.textContent =
+        'Votre achat précédent est prérempli. Vérifiez puis payez.';
+
+      formMessage.style.color =
+        '#cbd5e1';
+
+      return;
     }
 
     const radio =
@@ -1492,13 +2182,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!tx || !tx.operateur) return;
 
+    const estUnites =
+      typeof tx.forfaitCode === 'string' &&
+      tx.forfaitCode.startsWith('unites_');
+
+    /* Montant d'unités : colonne en base, sinon lu dans le libellé */
+    const unitesMontant =
+      estUnites
+        ? (Number(tx.unitesMontant) ||
+           parseInt(
+             String(tx.forfaitLabel || '').replace(/\D/g, ''),
+             10
+           ) || 0)
+        : 0;
+
     window.ouvrirModal(
       tx.operateur,
       {
         payer: tx.payer,
         receveur: tx.receveur,
         forfaitCode: tx.forfaitCode,
-        ancienPrix: tx.prix
+        ancienPrix: tx.prix,
+        unitesMontant
       }
     );
   }
@@ -1594,10 +2299,13 @@ document.addEventListener('DOMContentLoaded', () => {
       prix:
         data.prix,
 
+      unitesMontant:
+        data.unitesMontant || null,
+
       status:
         'pending',
 
-      meta: {}
+      meta: data.meta || {}
     };
   }
 
@@ -1678,6 +2386,13 @@ document.addEventListener('DOMContentLoaded', () => {
         meta:
           tx.meta
       };
+
+      /* Colonne propre aux transferts d'unités : envoyée seulement
+         dans ce cas (le trigger SQL revalide le montant). */
+      if (tx.unitesMontant) {
+        supabasePayload.unites_montant =
+          tx.unitesMontant;
+      }
 
       window.supabaseClient
         .from('transactions')
@@ -1793,10 +2508,18 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
+        /* Transfert d'unités : montant rapide ou saisi librement */
+        if (montantUnitesSaisi() !== null) {
+
+          await soumettreUnites(payer, receveur);
+
+          return;
+        }
+
         if (!forfaitInput) {
 
           formMessage.textContent =
-            'Veuillez sélectionner un forfait.';
+            'Veuillez sélectionner un forfait ou un montant d\'unités.';
 
           formMessage.style.color =
             '#f87171';
@@ -1959,7 +2682,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             forfaitLabel,
 
-            prix
+            prix,
+
+            meta: metaProgramme()
           });
 
         formMessage.textContent =
@@ -1973,6 +2698,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addTransactionToHistory(
           payload
         );
+
+        signalerProgrammation(payload);
 
         disableForm(true);
 
@@ -2172,6 +2899,7 @@ async function synchroniserHistoriqueSupabase() {
       forfaitLabel: tx.forfait_label,
       prix: tx.prix,
       status: tx.status,
+      unitesMontant: tx.unites_montant || null,
       meta: tx.meta || {}
     }));
 
@@ -2250,6 +2978,8 @@ function demarrerRealtimeTransactions(uid) {
               updated.prix,
             status:
               updated.status,
+            unitesMontant:
+              updated.unites_montant || null,
             meta:
               updated.meta || {}
           };
@@ -2271,6 +3001,7 @@ function demarrerRealtimeTransactions(uid) {
           afficherHistorique();
 
           if (updated.status === 'confirmed') {
+
             alert(
               '✅ Votre souscription a été acceptée !'
             );
@@ -2321,8 +3052,6 @@ function demarrerRealtimeTransactions(uid) {
   window.__mfStartRealtime = demarrerRealtimeTransactions;
 
 });
-
-
 
 
 /* =========================================================
@@ -2417,9 +3146,7 @@ function demarrerRealtimeTransactions(uid) {
 
           return;
         }
-
-
-        try {
+try {
 
           const {
             data,
@@ -2439,9 +3166,7 @@ function demarrerRealtimeTransactions(uid) {
                 }
               }
             });
-
-
-          if (error) {
+if (error) {
             throw error;
           }
 
@@ -2480,8 +3205,7 @@ function demarrerRealtimeTransactions(uid) {
 
 
         } catch (err) {
-
-          console.error(
+console.error(
             '[MonForfait] Erreur inscription :',
             err
           );
@@ -2539,9 +3263,7 @@ function demarrerRealtimeTransactions(uid) {
 
         return;
       }
-
-
-      try {
+try {
 
         /* ===========================
            CONNEXION SUPABASE
@@ -2555,11 +3277,9 @@ function demarrerRealtimeTransactions(uid) {
 
             email,
 
-            password
-          });
-
-
-        if (error) {
+            password,
+});
+if (error) {
           throw error;
         }
 
@@ -2642,8 +3362,7 @@ function demarrerRealtimeTransactions(uid) {
 
 
       } catch (err) {
-
-        console.error(
+console.error(
           '[MonForfait] Erreur connexion :',
           err
         );
@@ -3233,3 +3952,15 @@ if (typeof window.__mfStartRealtime === 'function') {
     };
 
 })();
+
+
+// Afficher/masquer le mot de passe sur les pages connexion et inscription.
+window.togglePasswordVisibility = function () {
+  const field = document.getElementById('password');
+  const button = document.querySelector('.toggle-password');
+  if (!field || !button) return;
+  const willShow = field.type === 'password';
+  field.type = willShow ? 'text' : 'password';
+  button.textContent = willShow ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+  button.setAttribute('aria-pressed', String(willShow));
+};
