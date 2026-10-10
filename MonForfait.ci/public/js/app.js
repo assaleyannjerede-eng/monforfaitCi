@@ -3142,6 +3142,9 @@ function demarrerRealtimeTransactions(uid) {
 
           alert(
             'Mot de passe minimum 6 caractères.'
+            'doit contenir une chiffre.'
+          'doit contenir un caractere special. @&€#$£¥%'
+            'doit contenir une lettre majuscule.'
           );
 
           return;
