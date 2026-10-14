@@ -18,7 +18,12 @@
  *   depot_orange | depot_mtn | depot_moov
  *   fibre_orange | fibre_mtn | fibre_moov
  * Libellés : « Dépôt Orange Money 5 000 F », « Recharge fibre MTN 15 000 F ».
- * Le prix enregistré est le montant choisi (aucun frais ajouté ici).
+ *
+ * Frais de service : gérés par la base (app_settings) :
+ *   - taux_commission_depot
+ *   - taux_commission_fibre
+ * Le client paie montant × taux (arrondi). Le montant crédité reste celui choisi.
+ * Validation serveur : trigger BEFORE INSERT (006_validation_depot_fibre.sql).
  */
 (function () {
   'use strict';
@@ -35,6 +40,11 @@
 
   var RE_NUMERO = /^\+?\d{8,15}$/;
 
+  /* Taux de commission lus depuis app_settings (fallback 1.06 = 6 %). */
+  var tauxDepot = null;
+  var tauxFibre = null;
+  var TAUX_DEFAUT = 1.06;
+
   function fmt(n) {
     return Number(n).toLocaleString('fr-FR') + '\u00a0F';
   }
@@ -50,8 +60,58 @@
       : '';
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  function tauxPour(kind) {
+    if (kind === 'depot') {
+      return (typeof tauxDepot === 'number' && tauxDepot > 0) ? tauxDepot : TAUX_DEFAUT;
+    }
+    if (kind === 'fibre') {
+      return (typeof tauxFibre === 'number' && tauxFibre > 0) ? tauxFibre : TAUX_DEFAUT;
+    }
+    return TAUX_DEFAUT;
+  }
 
+  function prixAvecFrais(montant, kind) {
+    return Math.round(Number(montant) * tauxPour(kind));
+  }
+
+  async function chargerTauxCommissionServices() {
+    if (!window.supabaseClient) {
+      console.warn('[MonForfait] Supabase indisponible pour les taux dépôt/fibre.');
+      return;
+    }
+
+    try {
+      var { data, error } = await window.supabaseClient
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['taux_commission_depot', 'taux_commission_fibre']);
+
+      if (error) throw error;
+
+      if (data && data.length) {
+        data.forEach(function (row) {
+          var t = parseFloat(row.value);
+          if (!Number.isFinite(t) || t <= 0) return;
+          if (row.key === 'taux_commission_depot') tauxDepot = t;
+          if (row.key === 'taux_commission_fibre') tauxFibre = t;
+        });
+      }
+
+      console.log(
+        '[MonForfait] Taux services — dépôt:',
+        tauxDepot || TAUX_DEFAUT,
+        '| fibre:',
+        tauxFibre || TAUX_DEFAUT
+      );
+    } catch (err) {
+      console.warn(
+        '[MonForfait] Taux commission dépôt/fibre indisponibles, fallback 6 % :',
+        err
+      );
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
     var $ = function (id) { return document.getElementById(id); };
 
     var panel   = $('svcPanel');
@@ -68,8 +128,22 @@
     var go       = $('svcGo');
     var tiles    = Array.prototype.slice.call(document.querySelectorAll('.svc-tile'));
 
+    /* Zone d'affichage du total (créée dynamiquement si absente). */
+    var totalEl = $('svcTotal');
+    if (!totalEl) {
+      totalEl = document.createElement('p');
+      totalEl.id = 'svcTotal';
+      totalEl.className = 'svc-total';
+      totalEl.hidden = true;
+      if (msg && msg.parentNode) {
+        msg.parentNode.insertBefore(totalEl, msg);
+      } else {
+        form.appendChild(totalEl);
+      }
+    }
+
     var cur = null;       /* { kind: 'depot'|'fibre', op: 'MTN'|'Orange'|'MOOV' } */
-    var montant = null;   /* montant choisi (FCFA) */
+    var montant = null;   /* montant choisi (FCFA) — montant crédité */
     var occupe = false;   /* évite le double envoi */
 
     function afficher(texte, etat) {
@@ -77,9 +151,28 @@
       msg.textContent = texte || '';
     }
 
+    function afficherTotal() {
+      if (!cur || montant == null) {
+        totalEl.hidden = true;
+        totalEl.textContent = '';
+        return;
+      }
+      var prix = prixAvecFrais(montant, cur.kind);
+      totalEl.hidden = false;
+      totalEl.textContent =
+        'Vous payez ' + fmt(prix) +
+        ' (frais de service inclus). ' +
+        (cur.kind === 'depot'
+          ? 'Le destinataire reçoit ' + fmt(montant) + '.'
+          : 'La ligne est rechargée de ' + fmt(montant) + '.');
+    }
+
     function construireMontants(kind) {
       chipsBox.replaceChildren();
       montant = null;
+      totalEl.hidden = true;
+      totalEl.textContent = '';
+
       MONTANTS[kind].forEach(function (m) {
         var b = document.createElement('button');
         b.type = 'button';
@@ -92,6 +185,7 @@
             c.setAttribute('aria-pressed', c === b ? 'true' : 'false');
           });
           afficher('');
+          afficherTotal();
         });
         chipsBox.appendChild(b);
       });
@@ -99,8 +193,8 @@
 
     function selectionner(tile, auClavier) {
       var meme = cur && cur.kind === tile.dataset.kind && cur.op === tile.dataset.op;
-
       cur = { kind: tile.dataset.kind, op: tile.dataset.op };
+
       var nom = NOM_OP[cur.op] || cur.op;
       var pref = prefixe(cur.op);
 
@@ -126,23 +220,23 @@
         num.value = '';
         construireMontants(cur.kind);
       }
+
       afficher('');
       panel.hidden = false;
 
       try {
         panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } catch (e) { /* anciens navigateurs */ }
+
       if (auClavier) num.focus({ preventScroll: true });
     }
 
     tiles.forEach(function (t) {
       t.addEventListener('click', function (e) {
-        /* e.detail === 0 : activation au clavier -> on place le focus */
         selectionner(t, e.detail === 0);
       });
     });
 
-    /* Renvoie { numero, payeur } si tout est valide, sinon affiche l'erreur. */
     function valider() {
       var nom = NOM_OP[cur.op] || cur.op;
       var numero = sansEspaces(num.value);
@@ -192,7 +286,6 @@
       msg.className = 'svc-msg is-ok';
       msg.textContent = 'Demande enregistrée ! Ref : ' + ref + '. Confirmation après validation.';
       if (popupBloque) {
-        /* Le navigateur a bloqué l'ouverture de Wave : lien à cliquer. */
         msg.appendChild(document.createTextNode(' '));
         var a = document.createElement('a');
         a.href = urlWave;
@@ -219,6 +312,9 @@
       occupe = true;
       go.disabled = true;
 
+      /* Recharge les taux au moment du paiement (au cas où ils ont changé). */
+      await chargerTauxCommissionServices();
+
       /* Onglet ouvert tout de suite (clic) : après un await, les
          navigateurs bloqueraient la fenêtre. */
       var waveTab = window.open('', '_blank');
@@ -229,7 +325,9 @@
       afficher('Enregistrement de votre demande…', '');
 
       var nom = NOM_OP[cur.op] || cur.op;
-      var prix = montant;
+      var montantBase = montant;
+      var prix = prixAvecFrais(montantBase, cur.kind);
+
       var tx = core.buildPayload({
         operateur: cur.op,
         payer: champs.payeur,
@@ -237,23 +335,32 @@
         forfaitCode: cur.kind + '_' + cur.op.toLowerCase(),
         forfaitLabel: (cur.kind === 'depot'
           ? 'Dépôt ' + nom + ' Money '
-          : 'Recharge fibre ' + nom + ' ') + fmt(prix),
+          : 'Recharge fibre ' + nom + ' ') + fmt(montantBase),
         prix: prix,
-        meta: {}
+        meta: {
+          montant_base: montantBase,
+          taux_applique: tauxPour(cur.kind)
+        }
       });
 
-      var ok = false;
+      var envoi = { ok: false, message: '' };
       try {
-        ok = await core.envoyerTransaction(tx);
+        /* Préfère la version détaillée pour afficher le message serveur (22023). */
+        if (typeof core.envoyerTransactionDetail === 'function') {
+          envoi = await core.envoyerTransactionDetail(tx);
+        } else {
+          envoi.ok = await core.envoyerTransaction(tx);
+        }
       } catch (err) {
-        ok = false;
+        envoi = { ok: false, message: '' };
       }
 
-      if (!ok) {
+      if (!envoi.ok) {
         if (waveTab) waveTab.close();
         afficher(
-          'Votre demande n\'a pas pu être enregistrée. Aucun paiement n\'a été lancé : ' +
-          'réessayez dans un instant ou contactez-nous sur WhatsApp.',
+          envoi.message ||
+          ('Votre demande n\'a pas pu être enregistrée. Aucun paiement n\'a été lancé : ' +
+           'réessayez dans un instant ou contactez-nous sur WhatsApp.'),
           'error'
         );
         occupe = false;
@@ -265,13 +372,17 @@
 
       var urlWave = core.waveUrl(prix);
       var popupBloque = !waveTab;
+
       if (waveTab) {
         waveTab.location.href = urlWave;
       }
+
       afficherSucces(tx.transactionId, urlWave, popupBloque);
 
       /* On efface le montant : pas de second paiement par réflexe. */
       montant = null;
+      totalEl.hidden = true;
+      totalEl.textContent = '';
       Array.prototype.forEach.call(chipsBox.children, function (c) {
         c.setAttribute('aria-pressed', 'false');
       });
@@ -281,5 +392,8 @@
         go.disabled = false;
       }, 1500);
     });
+
+    /* Charge les taux dès l'ouverture de la page. */
+    chargerTauxCommissionServices();
   });
 })();
