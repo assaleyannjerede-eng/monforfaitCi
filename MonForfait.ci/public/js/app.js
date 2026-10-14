@@ -2814,10 +2814,6 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   }
 
-  /* Rend la fonction accessible depuis le second bloc (Supabase Auth),
-     qui est en dehors de la portée de DOMContentLoaded. */
-  window.renderAdminControls = renderAdminControls;
-
   /* =====================================================
      NETTOYAGE DONNEES DEMO
      ===================================================== */
@@ -2849,197 +2845,189 @@ document.addEventListener('DOMContentLoaded', () => {
       '[MonForfait] Nettoyage des données de demo effectué.'
     );
   }
+/* =====================================================
+   SYNCHRONISATION HISTORIQUE AVEC SUPABASE
+   ===================================================== */
 
-  /* =====================================================
-     SYNCHRONISATION HISTORIQUE AVEC SUPABASE
-     ===================================================== */
+let clientRealtimeChannel = null;
 
-  let clientRealtimeChannel = null;
-
-  async function synchroniserHistoriqueSupabase() {
-
-    if (!window.supabaseClient) {
-      console.warn('[MonForfait] Supabase indisponible.');
-      return;
-    }
-
-    const stored = sessionStorage.getItem('mf_session');
-
-    if (!stored) {
-      return;
-    }
-
-    let session;
-
-    try {
-      session = JSON.parse(stored);
-    } catch (err) {
-      console.warn('[MonForfait] Session invalide.');
-      return;
-    }
-
-    const uid = session?.uid;
-
-    if (!uid) {
-      return;
-    }
-
-    try {
-
-      const { data, error } = await window.supabaseClient
-        .from('transactions')
-        .select('*')
-        .eq('user_id', uid)
-        .order('date', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      historique = (data || []).map(tx => ({
-        transactionId: tx.transaction_id,
-        date: tx.date,
-        operateur: tx.operateur,
-        payer: tx.payer,
-        receveur: tx.receveur,
-        forfaitCode: tx.forfait_code,
-        forfaitLabel: tx.forfait_label,
-        prix: tx.prix,
-        status: tx.status,
-        unitesMontant: tx.unites_montant || null,
-        meta: tx.meta || {}
-      }));
-
-      localStorage.setItem(
-        getHistoryStorageKey(),
-        JSON.stringify(historique)
-      );
-
-      afficherHistorique();
-
-      console.log(
-        '[MonForfait] Historique synchronisé avec Supabase.',
-        historique
-      );
-
-    } catch (err) {
-
-      console.error(
-        '[MonForfait] Erreur synchronisation Supabase :',
-        err
-      );
-    }
+async function synchroniserHistoriqueSupabase() {
+  if (!window.supabaseClient) {
+    console.warn('[MonForfait] Supabase indisponible.');
+    return;
   }
 
-  function demarrerRealtimeTransactions(uid) {
+  const stored = sessionStorage.getItem('mf_session');
 
-    if (!window.supabaseClient || !uid) {
-      return;
+  if (!stored) {
+    return;
+  }
+
+  let session;
+
+  try {
+    session = JSON.parse(stored);
+  } catch (err) {
+    console.warn('[MonForfait] Session invalide.');
+    return;
+  }
+
+  const uid = session?.uid;
+
+  if (!uid) {
+    return;
+  }
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from('transactions')
+      .select('*')
+      .eq('user_id', uid)
+      .order('date', { ascending: false });
+
+    if (error) {
+      throw error;
     }
 
-    if (clientRealtimeChannel) {
-      window.supabaseClient.removeChannel(
-        clientRealtimeChannel
-      );
-    }
+    historique = (data || []).map(tx => ({
+      transactionId: tx.transaction_id,
+      date: tx.date,
+      operateur: tx.operateur,
+      payer: tx.payer,
+      receveur: tx.receveur,
+      forfaitCode: tx.forfait_code,
+      forfaitLabel: tx.forfait_label,
+      prix: tx.prix,
+      status: tx.status,
+      unitesMontant: tx.unites_montant || null,
+      meta: tx.meta || {}
+    }));
 
-    clientRealtimeChannel =
-      window.supabaseClient
-        .channel('client-transactions-' + uid)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'transactions',
-            filter: 'user_id=eq.' + uid
-          },
-          payload => {
+    localStorage.setItem(
+      getHistoryStorageKey(),
+      JSON.stringify(historique)
+    );
 
-            console.log(
-              '[MonForfait] Transaction mise à jour :',
-              payload.new
-            );
+    afficherHistorique();
 
-            const updated = payload.new;
+    console.log(
+      '[MonForfait] Historique synchronisé avec Supabase.',
+      historique
+    );
 
-            const index = historique.findIndex(
-              tx =>
-                tx.transactionId ===
-                updated.transaction_id
-            );
+  } catch (err) {
+    console.error(
+      '[MonForfait] Erreur synchronisation Supabase :',
+      err
+    );
+  }
+}
+function demarrerRealtimeTransactions(uid) {
+  if (!window.supabaseClient || !uid) {
+    return;
+  }
 
-            const newTransaction = {
-              transactionId:
-                updated.transaction_id,
-              date:
-                updated.date,
-              operateur:
-                updated.operateur,
-              payer:
-                updated.payer,
-              receveur:
-                updated.receveur,
-              forfaitCode:
-                updated.forfait_code,
-              forfaitLabel:
-                updated.forfait_label,
-              prix:
-                updated.prix,
-              status:
-                updated.status,
-              unitesMontant:
-                updated.unites_montant || null,
-              meta:
-                updated.meta || {}
-            };
+  if (clientRealtimeChannel) {
+    window.supabaseClient.removeChannel(
+      clientRealtimeChannel
+    );
+  }
 
-            if (index !== -1) {
-              historique[index] =
-                newTransaction;
-            } else {
-              historique.unshift(
-                newTransaction
-              );
-            }
+  clientRealtimeChannel =
+    window.supabaseClient
+      .channel('client-transactions-' + uid)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'transactions',
+          filter: 'user_id=eq.' + uid
+        },
+        payload => {
 
-            localStorage.setItem(
-              getHistoryStorageKey(),
-              JSON.stringify(historique)
-            );
-
-            afficherHistorique();
-
-            if (updated.status === 'confirmed') {
-
-              alert(
-                '✅ Votre souscription a été acceptée !'
-              );
-            }
-
-            if (updated.status === 'failed') {
-
-              const reason =
-                updated.meta?.reason
-                  ? '\nMotif : ' +
-                    updated.meta.reason
-                  : '';
-
-              alert(
-                '❌ Votre souscription a été rejetée.' +
-                reason
-              );
-            }
-          }
-        )
-        .subscribe(status => {
           console.log(
-            '[MonForfait] Realtime transactions :',
-            status
+            '[MonForfait] Transaction mise à jour :',
+            payload.new
           );
-        });
-  }
 
+          const updated = payload.new;
+
+          const index = historique.findIndex(
+            tx =>
+              tx.transactionId ===
+              updated.transaction_id
+          );
+
+          const newTransaction = {
+            transactionId:
+              updated.transaction_id,
+            date:
+              updated.date,
+            operateur:
+              updated.operateur,
+            payer:
+              updated.payer,
+            receveur:
+              updated.receveur,
+            forfaitCode:
+              updated.forfait_code,
+            forfaitLabel:
+              updated.forfait_label,
+            prix:
+              updated.prix,
+            status:
+              updated.status,
+            unitesMontant:
+              updated.unites_montant || null,
+            meta:
+              updated.meta || {}
+          };
+
+          if (index !== -1) {
+            historique[index] =
+              newTransaction;
+          } else {
+            historique.unshift(
+              newTransaction
+            );
+          }
+
+          localStorage.setItem(
+            getHistoryStorageKey(),
+            JSON.stringify(historique)
+          );
+
+          afficherHistorique();
+
+          if (updated.status === 'confirmed') {
+
+            alert(
+              '✅ Votre souscription a été acceptée !'
+            );
+          }
+
+          if (updated.status === 'failed') {
+            const reason =
+              updated.meta?.reason
+                ? '\nMotif : ' +
+                  updated.meta.reason
+                : '';
+
+            alert(
+              '❌ Votre souscription a été rejetée.' +
+              reason
+            );
+          }
+        }
+      )
+      .subscribe(status => {
+        console.log(
+          '[MonForfait] Realtime transactions :',
+          status
+        );
+      });
+}
   /* =====================================================
      INITIALISATION
      ===================================================== */
@@ -3057,7 +3045,9 @@ document.addEventListener('DOMContentLoaded', () => {
   chargerCatalogueDepuisBDD()
     .then(() => afficherHistorique());
 
-  /* Pont vers le scope externe (onAuthStateChange) */
+  /* Pont vers le scope externe (onAuthStateChange) :
+     ces deux fonctions sont définies ici et n'existaient
+     nulle part ailleurs, d'où l'échec silencieux. */
   window.__mfSyncHistorique = synchroniserHistoriqueSupabase;
   window.__mfStartRealtime = demarrerRealtimeTransactions;
 
@@ -3145,48 +3135,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
 
-        /* ===========================
-           VALIDATION MOT DE PASSE
-           =========================== */
-
-        if (!password || password.length < 6) {
+        if (
+          !password ||
+          password.length < 6
+        ) {
 
           alert(
-            'Le mot de passe doit contenir au moins 6 caractères.'
+            'Mot de passe minimum 6 caractères.'
           );
 
           return;
         }
-
-        if (!/\d/.test(password)) {
-
-          alert(
-            'Le mot de passe doit contenir au moins un chiffre.'
-          );
-
-          return;
-        }
-
-        if (!/[@&€#$£¥%]/.test(password)) {
-
-          alert(
-            'Le mot de passe doit contenir au moins un caractère spécial (@ & € # $ £ ¥ %).'
-          );
-
-          return;
-        }
-
-        if (!/[A-Z]/.test(password)) {
-
-          alert(
-            'Le mot de passe doit contenir au moins une lettre majuscule.'
-          );
-
-          return;
-        }
-
-
-        try {
+try {
 
           const {
             data,
@@ -3206,8 +3166,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
               }
             });
-
-          if (error) {
+if (error) {
             throw error;
           }
 
@@ -3246,8 +3205,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         } catch (err) {
-
-          console.error(
+console.error(
             '[MonForfait] Erreur inscription :',
             err
           );
@@ -3305,9 +3263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return;
       }
-
-
-      try {
+try {
 
         /* ===========================
            CONNEXION SUPABASE
@@ -3322,9 +3278,8 @@ document.addEventListener('DOMContentLoaded', () => {
             email,
 
             password,
-          });
-
-        if (error) {
+});
+if (error) {
           throw error;
         }
 
@@ -3407,8 +3362,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
       } catch (err) {
-
-        console.error(
+console.error(
           '[MonForfait] Erreur connexion :',
           err
         );
@@ -3708,20 +3662,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
           JSON.stringify(profile)
         );
+if (typeof window.__mfSyncHistorique === 'function') {
+  await window.__mfSyncHistorique();
+} else {
+  console.warn('[MonForfait] __mfSyncHistorique indisponible.');
+}
 
-
-        if (typeof window.__mfSyncHistorique === 'function') {
-          await window.__mfSyncHistorique();
-        } else {
-          console.warn('[MonForfait] __mfSyncHistorique indisponible.');
-        }
-
-        if (typeof window.__mfStartRealtime === 'function') {
-          window.__mfStartRealtime(user.id);
-        } else {
-          console.warn('[MonForfait] __mfStartRealtime indisponible.');
-        }
-
+if (typeof window.__mfStartRealtime === 'function') {
+  window.__mfStartRealtime(user.id);
+} else {
+  console.warn('[MonForfait] __mfStartRealtime indisponible.');
+}
 
         renderUserArea(
           profile
@@ -3864,10 +3815,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!user) {
 
           if (
-            typeof window.renderAdminControls ===
+            typeof renderAdminControls ===
             'function'
           ) {
-            window.renderAdminControls(false);
+            renderAdminControls(false);
           }
 
           return;
@@ -3912,11 +3863,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         if (
-          typeof window.renderAdminControls ===
+          typeof renderAdminControls ===
           'function'
         ) {
 
-          window.renderAdminControls(
+          renderAdminControls(
             isAdmin,
             profile?.role,
             profile?.operator
@@ -3933,11 +3884,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         if (
-          typeof window.renderAdminControls ===
+          typeof renderAdminControls ===
           'function'
         ) {
 
-          window.renderAdminControls(false);
+          renderAdminControls(false);
         }
       }
     };
