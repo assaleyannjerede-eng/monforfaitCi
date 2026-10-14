@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta name="google-site-verification" content="gILjCPLc9mQR9Ua5Jz_b1w-JbyBhaiIvhDyJ0JBjPpg" />
+  <meta name="description" content="MonForfait.ci vous permet d'acheter facilement vos forfaits mobiles Orange, MTN et Moov en Côte d'Ivoire, de faire des dépôts Mobile Money et de recharger votre fibre.">
+  <title>MonForfait.ci - Accueil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="img/logo.png">
+  <link rel="stylesheet" href="css/jj.css">
+  <link rel="stylesheet" href="css/unites.css">
+  <link rel="stylesheet" href="css/programme.css">
+  <link rel="stylesheet" href="css/services.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <!-- Thème clair/sombre : dans le <head> pour s'appliquer avant l'affichage (js/theme.js) -->
+  <script src="js/theme.js"></script>
+  <style>
+/* Les panneaux ne défilent plus séparément : c'est le modal entier qui défile
+       (évite le double défilement, pénible sur téléphone). */
+    .panel { padding:10px 0 0 0; }
+    .panel.hidden { display:none; }
+    /* Req 10 : contact compact */
+    .contact-compact { display:flex; align-items:center; gap:10px; font-size:13px; flex-wrap:wrap; padding:4px 0; }
+    .contact-compact a { color:var(--accent); font-weight:600; text-decoration:none; }
+    .contact-compact a:hover { text-decoration:underline; }
+    /* Req 8 : bouton effacer historique */
+    #clearHistoryBtnContainer { display:none; margin-top:6px; text-align:right; }
+    #clearHistoryBtn { background:rgba(239,68,68,0.15); color:#fca5a5; border:1px solid rgba(239,68,68,0.3); padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; width:auto; }
+    #clearHistoryBtn:hover { background:rgba(239,68,68,0.25); }
+    /* Hint champ receveur */
+    .field-hint { font-size:11px; color:#9aa6b2; margin-top:3px; }
+    /* Note prix commission */
+    .prix-note { font-size:11px; color:#9aa6b2; margin-top:6px; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER - req 11 : zone userArea injectee par app.js -->
+  <header class="header" role="banner">
+    <img src="img/logo.png" alt="MonForfait logo" class="logo">
+    <div class="brand">
+      <h1>MonForfait.ci</h1>
+      <p>Recharges, dépôts et fibre</p>
+    </div>
+    <!-- Bouton de thème (js/theme.js) : à côté de la zone utilisateur, qui est réécrite par app.js -->
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Passer le site en mode clair">
+      <span id="themeIcon" aria-hidden="true">☀️</span><span id="themeLabel">Mode clair</span>
+    </button>
+    <!-- req 11 : connecte => nom + deconnexion | non connecte => connexion + inscription -->
+    <div class="user-area" id="userArea">
+      <button class="auth-btn login-btn"    id="userAreaLoginFallback">Se connecter</button>
+      <button class="auth-btn register-btn" id="userAreaRegisterFallback">S'inscrire</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- BANNIERE BIENVENUE - req 1 -->
+    <!-- Non connecte : "Bienvenue sur MonForfait.ci !" -->
+    <!-- Connecte : "Bienvenue, [Nom] !" -->
+    <div id="welcomeBanner" class="welcome-banner hidden"></div>
+
+<!-- Point 6 : Bloc "Comment souscrire" en haut de la page d'accueil -->
+    <section class="steps-block" aria-label="Comment souscrire">
+      <h2 class="steps-title">Comment souscrire en 3 étapes</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-icon">1️⃣</div>
+          <h3>Choisissez votre opérateur</h3>
+          <p>Sélectionnez MTN, Orange ou Moov selon votre réseau.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">2️⃣</div>
+          <h3>Sélectionnez un forfait</h3>
+          <p>Choisissez un forfait Internet ou Appels, ou transférez des unités.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">3️⃣</div>
+          <h3>Pouvez souscrire </h3>
+          <p>sans vous inscrire ou vous connecter.</p>
+        </div>
+      </div>
+</section>
+
+
+
+
+
+    <div class="grid">
+
+      <!-- COLONNE GAUCHE : operateurs et services -->
+      <div>
+        <section class="card">
+          <h2>Choisir opérateur</h2>
+          <!-- req 5 : chaque operateur ouvre ses propres forfaits dans le modal -->
+          <div class="operators" role="list">
+            <button class="op-btn" data-operateur="MTN"    aria-label="MTN">
+              <img src="img/logo_mtn.png" alt="MTN">
+            </button>
+            <button class="op-btn" data-operateur="Orange" aria-label="Orange">
+              <img src="img/logo_orange.png" alt="Orange">
+            </button>
+            <button class="op-btn" data-operateur="MOOV"   aria-label="MOOV">
+              <img src="img/logo_moov.jpg" alt="MOOV">
+            </button>
+          </div>
+
+          <!-- Souscriptions programmées : juste sous les logos (géré par js/programme.js) -->
+          <div class="prog-block">
+            <button type="button" class="prog-open" id="progOpen">
+              ⏰ Programmer une souscription <span class="prog-count" id="progCount" hidden>0</span>
+            </button>
+            <div class="prog-due" id="progDue" role="alert" hidden></div>
+            <ul class="prog-list" id="progList" aria-label="Souscriptions programmées" hidden></ul>
+          </div>
+
+          <h3 style="margin-top:16px">Services disponibles</h3>
+          <div class="services-list">
+            <div class="service-item">Forfaits Internet</div>
+            <div class="service-item"> Forfaits Appels</div>
+            <div class="service-item" id="serviceUnites" hidden> Transfert d'unités</div>
+            <div class="service-item"> Dépôt Mobile Money</div>
+            <div class="service-item"> Recharge fibre</div>
+          </div>
+        </section>
+
+        <!-- Dépôt Mobile Money (géré par js/services.js) -->
+        <section class="card svc-card" aria-labelledby="svcDepotTitre">
+          <h2 id="svcDepotTitre">Dépôt Mobile Money</h2>
+          <p class="small">Déposez de l'argent sur un compte Mobile Money.</p>
+          <div class="svc-tiles">
+            <button type="button" class="svc-tile" data-kind="depot" data-op="Orange" aria-pressed="false">
+              <span class="svc-ic" aria-hidden="true">💵</span>
+              <span class="svc-name">Orange Money</span><span class="svc-sub">Dépôt</span>
+            </button>
+            <button type="button" class="svc-tile" data-kind="depot" data-op="MTN" aria-pressed="false">
+              <span class="svc-ic" aria-hidden="true">💵</span>
+              <span class="svc-name">MTN Money</span><span class="svc-sub">Dépôt</span>
+            </button>
+            <button type="button" class="svc-tile" data-kind="depot" data-op="MOOV" aria-pressed="false">
+              <span class="svc-ic" aria-hidden="true">💵</span>
+              <span class="svc-name">Moov Money</span><span class="svc-sub">Dépôt</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Recharge fibre (géré par js/services.js) -->
+        <section class="card svc-card" aria-labelledby="svcFibreTitre">
+          <h2 id="svcFibreTitre">Recharge fibre</h2>
+          <p class="small">Rechargez votre abonnement internet fibre.</p>
+          <div class="svc-tiles">
+            <button type="button" class="svc-tile" data-kind="fibre" data-op="Orange" aria-pressed="false">
+              <span class="svc-ic" aria-hidden="true">🌐</span>
+              <span class="svc-name">Orange Fibre</span><span class="svc-sub">Recharge</span>
+            </button>
+            <button type="button" class="svc-tile" data-kind="fibre" data-op="MTN" aria-pressed="false">
+              <span class="svc-ic" aria-hidden="true">🌐</span>
+              <span class="svc-name">MTN Fibre</span><span class="svc-sub">Recharge</span>
+            </button>
+            <button type="button" class="svc-tile" data-kind="fibre" data-op="MOOV" aria-pressed="false">
+              <span class="svc-ic" aria-hidden="true">🌐</span>
+              <span class="svc-name">Moov Fibre</span><span class="svc-sub">Recharge</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Saisie commune aux deux services : s'affiche quand une tuile est choisie -->
+        <section class="card svc-panel" id="svcPanel" data-op="" aria-labelledby="svcTitre" hidden>
+          <h3 class="svc-head"><span class="svc-dot" aria-hidden="true"></span><span id="svcTitre"></span></h3>
+          <form id="svcForm" novalidate>
+            <label for="svcNum" id="svcNumLabel">Numéro</label>
+            <input id="svcNum" name="svcNum" type="tel" inputmode="numeric" autocomplete="off" placeholder="+225XXXXXXXXXX">
+            <p class="svc-hint" id="svcNumHint"></p>
+
+            <p class="svc-lbl" id="svcMontantLabel">Montant (FCFA)</p>
+            <div class="svc-chips" id="svcChips" role="group" aria-labelledby="svcMontantLabel"></div>
+
+            <label for="svcPayer">Votre numéro Wave (payeur)</label>
+            <input id="svcPayer" name="svcPayer" type="tel" inputmode="numeric" autocomplete="tel" placeholder="+225XXXXXXXXXX">
+
+            <p class="svc-msg" id="svcMsg" role="status" aria-live="polite"></p>
+            <button type="submit" class="btn-payer svc-go" id="svcGo">Continuer vers le paiement Wave</button>
+          </form>
+        </section>
+
+        <!-- Achats habituels : visible seulement si connecté et déjà un achat confirmé -->
+        <section class="card" id="habitualCard" style="margin-top:16px" hidden>
+          <h3>Vos achats habituels</h3>
+          <p class="small">Un clic pour racheter, les numéros sont déjà remplis.</p>
+          <div class="habit-list" id="habitualList"></div>
+        </section>
+
+        <section class="card" style="margin-top:16px">
+          <h3>Actualités &amp; Promotions</h3>
+          <p class="small">Suivez nos offres et promotions sur notre chaîne WhatsApp.</p>
+        </section>
+      </div>
+
+      <!-- COLONNE DROITE : contact, politique, historique -->
+      <aside>
+        <!-- req 10 : section contact REDUITE -->
+        <div class="card" style="padding:10px 14px">
+          <h3 style="font-size:13px;margin-bottom:5px"> Contact &amp; WhatsApp</h3>
+          <div class="contact-compact">
+            <span style="font-weight:700;color:var(--accent)">05 00 43 50 66</span>
+            <a href="https://wa.me/2250400435066" target="_blank" rel="noopener">💬 WhatsApp</a>
+          </div>
+        </div>
+
+        <!-- Politique de reclamation -->
+        <div class="card" style="margin-top:10px">
+          <h3 style="font-size:13px">Politique de réclamation</h3>
+          <p class="policy" style="margin-top:6px">
+            <strong>IMPORTANT :</strong> un Problème ? Vous avez <strong>24h max</strong> pour nous contacter.
+          </p>
+        </div>
+
+        <!-- HISTORIQUE - req 8 (bouton effacer si connecte) + req 9 (anonyme voit pending) -->
+        <div class="card" style="margin-top:10px">
+          <h3 style="font-size:13px">Historique des transactions</h3>
+          <!-- req 8 : visible uniquement si connecte -->
+          <div id="clearHistoryBtnContainer">
+            <button id="clearHistoryBtn"> Effacer mon historique</button>
+          </div>
+          <!-- Liste injectee par afficherHistorique() dans app.js -->
+          <div class="historique-list" aria-live="polite"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- MODAL FORFAIT
+       req 2  : accordeons fermes par defaut
+       req 5  : forfaits propres a chaque operateur
+       req 6  : validation prefixe numero receveur
+       req 13 : panneaux defilants
+       req 15 : accessible sans connexion -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true"
+       aria-labelledby="titre" aria-hidden="true">
+    <div class="modal-content" role="document">
+      <button class="close" aria-label="Fermer" id="closeModal">✖</button>
+      <h2 id="titre">Opérateur</h2>
+
+      <form id="paymentForm" novalidate>
+        <fieldset>
+          <legend class="sr-only">Informations de paiement</legend>
+
+          <!-- Numero Wave du payeur -->
+          <label for="payerNumero">Votre numéro Wave (payeur)</label>
+          <input id="payerNumero" name="payerNumero" type="tel" inputmode="numeric"
+                 placeholder="+225XXXXXXXXXX" required>
+
+          <!-- Numero du receveur - req 6 : prefixe valide selon operateur -->
+          <label for="receveurNumero">Numéro du receveur</label>
+          <input id="receveurNumero" name="receveurNumero" type="tel" inputmode="numeric"
+                 placeholder="+225XXXXXXXXXX" required>
+          <!-- Mis a jour par ouvrirModal() : "Numero Orange (07) / MTN (05) / MOOV (01)" -->
+          <div class="field-hint" id="receveurHint"></div>
+        </fieldset>
+
+        <!-- Accordeons des forfaits - req 2 : fermes par defaut a l'ouverture -->
+        <fieldset class="forfaits-block" aria-labelledby="forfaitsTitle">
+          <legend id="forfaitsTitle" class="sr-only">Choisir un forfait</legend>
+
+          <!-- Accordeon Appels -->
+          <button type="button" class="accordion"
+                  aria-expanded="false" aria-controls="panel-appels" id="btn-appels">
+            📞 Forfaits Appels <span class="chev">▾</span>
+          </button>
+          <!-- req 13 : .panel a max-height + overflow-y:auto -->
+          <div id="panel-appels" class="panel hidden" role="region" aria-labelledby="btn-appels">
+            <!-- Genere par refreshForfaitsPanel() dans app.js -->
+          </div>
+
+          <!-- Accordeon Internet -->
+          <button type="button" class="accordion"
+                  aria-expanded="false" aria-controls="panel-internet" id="btn-internet">
+            📶 Forfaits Internet <span class="chev">▾</span>
+          </button>
+          <!-- req 13 : .panel a max-height + overflow-y:auto -->
+          <div id="panel-internet" class="panel hidden" role="region" aria-labelledby="btn-internet">
+            <!-- Genere par refreshForfaitsPanel() dans app.js -->
+          </div>
+
+          <!-- Accordeon Transfert d'unites : masque tant que app.js n'a pas
+               confirme que le service est actif en base (migration 005) -->
+          <button type="button" class="accordion" hidden
+                  aria-expanded="false" aria-controls="panel-unites" id="btn-unites">
+            💸 Transfert d'unités <span class="chev">▾</span>
+          </button>
+          <div id="panel-unites" class="panel hidden" role="region" aria-labelledby="btn-unites">
+            <div class="unites-box">
+              <p class="unites-intro">Envoyez des unités au numéro du receveur. Choisissez un montant ou saisissez le vôtre.</p>
+
+              <div class="unites-chips" role="group" aria-label="Montants rapides">
+                <button type="button" class="unites-chip" data-montant="500"  aria-pressed="false">500 F</button>
+                <button type="button" class="unites-chip" data-montant="1000" aria-pressed="false">1 000 F</button>
+                <button type="button" class="unites-chip" data-montant="2000" aria-pressed="false">2 000 F</button>
+                <button type="button" class="unites-chip" data-montant="5000" aria-pressed="false">5 000 F</button>
+              </div>
+
+              <label for="unitesMontant">Ou un autre montant (en F)</label>
+              <input id="unitesMontant" name="unitesMontant" type="text" inputmode="numeric"
+                     autocomplete="off" maxlength="6" placeholder="Ex : 1500">
+              <div class="field-hint" id="unitesHint"></div>
+
+              <p id="unitesTotal" class="unites-total" role="status" aria-live="polite" hidden></p>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Souscription programmée : rappelle que le paiement se fait maintenant (géré par app.js) -->
+        <p id="progPayBanner" class="prog-pay-banner" role="status" aria-live="polite" hidden></p>
+
+        <!-- Note : prix inclut commission 10% (req 4) -->
+        <p class="prix-note">* Les prix affichés incluent les frais de service de (5%)</p>
+
+        <!-- Pied fixe : le message d'erreur et les boutons restent toujours visibles -->
+        <div class="form-footer">
+          <p id="formMessage" role="status" aria-live="polite" class="form-message"></p>
+
+          <div class="form-actions">
+            <!-- req 14 : le clic ouvre l'URL Wave dans app.js -->
+            <button type="submit" class="btn-payer"> Payer avec Wave</button>
+            <button type="button" class="btn-cancel" id="cancelModal">Annuler</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL : programmer une souscription (4 étapes, géré par js/programme.js) -->
+  <div id="progModal" class="prog-modal hidden" role="dialog" aria-modal="true"
+       aria-labelledby="progTitre" aria-hidden="true">
+    <div class="prog-content" id="progContent" data-op="">
+      <button type="button" class="prog-close" id="progClose" aria-label="Fermer">✖</button>
+      <h2 id="progTitre">⏰ Souscription</h2>
+
+      <ol class="prog-steps" id="progSteps" aria-label="Étapes">
+        <li>Opérateur</li><li>Achat</li><li>Numéros</li><li>Paiement</li>
+      </ol>
+      <p class="prog-recap" id="progRecap" hidden></p>
+
+      <form id="progForm" novalidate>
+
+        <!-- Étape 1 : opérateur -->
+        <section class="prog-step" data-step="1">
+          <p class="prog-q">Quel opérateur ?</p>
+          <div class="prog-ops">
+            <button type="button" class="prog-op" data-op="MTN" aria-label="MTN"><img src="img/logo_mtn.png" alt="MTN"></button>
+            <button type="button" class="prog-op" data-op="Orange" aria-label="Orange"><img src="img/logo_orange.png" alt="Orange"></button>
+            <button type="button" class="prog-op" data-op="MOOV" aria-label="Moov"><img src="img/logo_moov.jpg" alt="Moov"></button>
+          </div>
+        </section>
+
+        <!-- Étape 2 : forfait ou transfert d'unités -->
+        <section class="prog-step" data-step="2" hidden>
+          <p class="prog-q">Que voulez-vous acheter ?</p>
+          <div class="prog-tabs" role="tablist" aria-label="Type d'achat">
+            <button type="button" class="prog-tab" role="tab" data-tab="appels">📞 Appels</button>
+            <button type="button" class="prog-tab" role="tab" data-tab="internet">📶 Internet</button>
+            <button type="button" class="prog-tab" role="tab" data-tab="unites" id="progTabUnites" hidden>💸 Unités</button>
+          </div>
+          <div id="progOffres" class="prog-offres"></div>
+          <div id="progUnitesBox" class="prog-unites" hidden>
+            <div class="prog-chips" role="group" aria-label="Montants rapides">
+              <button type="button" class="prog-chip" data-montant="500">500 F</button>
+              <button type="button" class="prog-chip" data-montant="1000">1 000 F</button>
+              <button type="button" class="prog-chip" data-montant="2000">2 000 F</button>
+              <button type="button" class="prog-chip" data-montant="5000">5 000 F</button>
+            </div>
+            <label class="prog-lbl" for="progUnites">Ou un autre montant (en F)</label>
+            <input id="progUnites" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="Ex : 1500">
+            <button type="button" class="prog-btn prog-btn-go prog-big" id="progUnitesOk">Continuer</button>
+          </div>
+          <p class="prog-hint" id="progPrixHint">Le prix exact s'affiche au moment du paiement.</p>
+        </section>
+
+        <!-- Étape 3 : numéros -->
+        <section class="prog-step" data-step="3" hidden>
+          <p class="prog-q">Les numéros</p>
+          <label class="prog-lbl" for="progPayer">Votre numéro Wave (payeur)</label>
+          <input id="progPayer" type="tel" inputmode="numeric" placeholder="+225XXXXXXXXXX">
+          <label class="prog-lbl" for="progReceveur">Numéro du receveur</label>
+          <input id="progReceveur" type="tel" inputmode="numeric" placeholder="+225XXXXXXXXXX">
+          <div class="prog-hint" id="progReceveurHint"></div>
+          <button type="button" class="prog-btn prog-btn-go prog-big" id="progNumerosOk">Continuer</button>
+        </section>
+
+        <!-- Étape 4 : exécution immédiate ou à une date choisie (dans les 2 cas on PAIE MAINTENANT) -->
+        <section class="prog-step" data-step="4" hidden>
+          <p class="prog-q">Quand voulez-vous recevoir ?</p>
+          <button type="button" class="prog-btn prog-btn-go prog-big" id="progPayNow"> Payer maintenant</button>
+          <p class="prog-hint prog-center">Exécution immédiate</p>
+          <div class="prog-or"><span>ou à une date précise</span></div>
+          <label class="prog-lbl" for="progDate">Date et heure d'exécution</label>
+          <input id="progDate" type="datetime-local">
+          <label class="prog-lbl" for="progRepeat">Répétition</label>
+          <select id="progRepeat">
+            <option value="once">Une seule fois</option>
+            <option value="daily">Chaque jour</option>
+            <option value="weekly">Chaque semaine</option>
+            <option value="monthly">Chaque mois</option>
+          </select>
+          <p class="prog-info-box"> Vous <strong>payez dès maintenant</strong> par Wave. L'agent envoie ensuite le forfait à la date choisie. Pour une répétition, la première est payée maintenant, les suivantes vous sont rappelées pour paiement.</p>
+          <button type="button" class="prog-btn prog-btn-go prog-big" id="progSchedule">Payer et programmer</button>
+        </section>
+
+        <p id="progMessage" class="prog-message" role="status" aria-live="polite"></p>
+        <div class="prog-foot">
+          <button type="button" class="prog-btn" id="progBack" hidden>← Retour</button>
+          <button type="button" class="prog-btn" id="progCancel">Annuler</button>
+        </div>
+        <p class="prog-note">Le paiement se fait par Wave, toujours à la validation de votre souscription. Les rappels des répétitions sont enregistrés sur cet appareil.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img src="img/logo.png" alt="MonForfait logo" class="footer-logo">
+        <div>
+          <h3 class="footer-title">MonForfait.ci</h3>
+          <p class="footer-tag">Votre partenaire de confiance pour les transferts et recharges.</p>
+        </div>
+      </div>
+      <div class="footer-columns">
+        <div class="footer-col">
+          <h4>Services</h4>
+          <ul style="list-style:none;padding:0;margin:0;line-height:2">
+            <li>Forfaits Internet</li>
+            <li>Forfaits Appels</li>
+            <li>Dépôt Mobile Money</li>
+            <li>Recharge fibre</li>
+          </ul>
+        </div>
+        <!-- req 10 : contact compact dans le footer -->
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <p style="margin:0;line-height:2;font-size:13px">
+            📞 <strong>05 00 43 50 66</strong><br>
+            <a href="https://wa.me/2250500435066" target="_blank" rel="noopener"
+               style="color:var(--accent);font-weight:600">💬 WhatsApp</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="links">
+        <a href="conditions.html">Conditions</a>
+        <a href="confidentialite.html">Confidentialité</a>
+      </div>
+      <div class="copyright">© 2026 MonForfait.ci — Tous droits réservés</div>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS (ordre important) -->
+  <!-- 1. Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0"></script>
+  <script src="js/supabase.js"></script>
+  <!-- 2. req 4, 5 : donnees forfaits en JSON par operateur + taux commission -->
+  <script src="js/forfaits.js"></script>
+  <!-- 3. Logique principale -->
+  <script src="js/app.js"></script>
+  <!-- 4. Souscriptions programmées -->
+  <script src="js/programme.js"></script>
+  <!-- 5. Dépôt Mobile Money & recharge fibre (utilise le pont window.MonForfaitCore d'app.js) -->
+  <script src="js/services.js"></script>
+
+</body>
+</html>

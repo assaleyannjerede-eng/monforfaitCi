@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MonForfait.ci - Inscription</title>
+  <!-- Feuille de style contenant l'animation de fond douce (req 3) -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!--
+    Req 3 : Meme animation de couleur douce que la page de connexion.
+    Le fond change progressivement entre plusieurs degrades toutes les 12s.
+  -->
+  <div class="container">
+    <div class="card">
+      <!-- Logo avec animation -->
+      <img src="img/logo.png" class="logo" alt="Logo MonForfait">
+      <h1>Créer un compte</h1>
+
+      <!-- Champs du formulaire d'inscription -->
+      <input type="text"     id="name"     placeholder="Nom complet">
+      <input type="text"     id="phone"    placeholder="+225 0101010101">
+      <input type="email"    id="email"    placeholder="Email">
+      <input type="password" id="password" placeholder="Mot de passe (min 8 caractères)">
+      <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" aria-label="Afficher ou masquer le mot de passe">Afficher le mot de passe</button>
+<!-- Bouton inscription : appelle register() dans app.js -->
+      <button id="registerBtn">S'inscrire</button>
+
+      <p style="font-size:12px;opacity:.8;margin-top:10px">En vous inscrivant, vous acceptez nos <a href="conditions.html">Conditions d'utilisation</a> et notre <a href="confidentialite.html">Politique de confidentialité</a>.</p>
+      <p>Déjà inscrit ? <a href="index.html">Connexion</a></p>
+    </div>
+  </div>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0"></script>
+  <script src="js/supabase.js"></script>
+  <!-- Donnees des forfaits (requis par app.js) -->
+  <script src="js/forfaits.js"></script>
+  <!-- Logique principale (contient register()) -->
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+/* =========================================================
+   services.css — Dépôt Mobile Money & Recharge fibre
+   (cartes de dashboard.html, logique dans js/services.js)
+   Thème sombre par défaut ; les valeurs du thème clair
+   sont dans css/theme.css.
+   ========================================================= */
+
+:root {
+  --svc-line: rgba(255, 255, 255, 0.12);
+  --svc-surface: rgba(255, 255, 255, 0.04);
+  --svc-muted: #9aa6b8;
+}
+
+/* Couleurs des opérateurs (même teintes que la maquette) */
+.svc-tile[data-op="MTN"],
+.svc-panel[data-op="MTN"]    { --svc-c: #ffd400; }
+.svc-tile[data-op="Orange"],
+.svc-panel[data-op="Orange"] { --svc-c: #ff7900; }
+.svc-tile[data-op="MOOV"],
+.svc-panel[data-op="MOOV"]   { --svc-c: #4aa3ff; }
+
+.svc-card { margin-top: 16px; }
+.svc-card h2 { margin-bottom: 4px; }
+
+/* --- Tuiles (3 opérateurs par service) --- */
+.svc-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.svc-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--svc-line);
+  border-radius: 12px;
+  background: var(--svc-surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.svc-tile:hover { border-color: var(--svc-muted); }
+.svc-tile:focus-visible { outline: 2px solid var(--svc-c); outline-offset: 2px; }
+.svc-tile[aria-pressed="true"] {
+  padding: 9px;
+  border: 2px solid var(--svc-c);
+  background: color-mix(in srgb, var(--svc-c) 14%, var(--svc-surface));
+}
+
+.svc-ic {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--svc-c);
+  color: #111;
+  font-size: 18px;
+  line-height: 1;
+}
+.svc-name { font-size: 14px; font-weight: 700; line-height: 1.2; }
+.svc-sub  { font-size: 12px; color: var(--svc-muted); }
+
+/* --- Panneau de saisie (partagé par les deux services) --- */
+.svc-panel {
+  margin-top: 16px;
+  border-left: 4px solid var(--svc-c, var(--accent));
+  animation: none; /* .card anime l'entrée (1 s) : trop lent pour un panneau ouvert au clic */
+}
+.svc-panel[hidden] { display: none; }
+
+.svc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+.svc-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--svc-c, var(--accent));
+}
+
+.svc-panel label,
+.svc-lbl {
+  display: block;
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--svc-muted);
+}
+.svc-hint { margin: 4px 0 0; font-size: 12px; color: var(--svc-muted); }
+
+.svc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.svc-chip {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--svc-line);
+  border-radius: 999px;
+  background: var(--svc-surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.svc-chip:hover { border-color: var(--svc-muted); }
+.svc-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.svc-chip[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1500;
+}
+
+.svc-go { width: 100%; min-height: 44px; margin-top: 16px; font-size: 15px; font-weight: 700; }
+.svc-go:disabled { opacity: .6; cursor: not-allowed; }
+
+.svc-msg { margin: 10px 0 0; min-height: 18px; font-size: 13px; line-height: 1.4; color: var(--svc-muted); }
+.svc-msg:empty { display: none; }
+.svc-msg.is-error { color: #f87171; }
+.svc-msg.is-ok    { color: #34d399; }
+.svc-msg a { color: inherit; font-weight: 700; text-decoration: underline; }
+
+@media (max-width: 380px) {
+  .svc-tiles { gap: 6px; }
+  .svc-tile { padding: 8px; }
+  .svc-tile[aria-pressed="true"] { padding: 7px; }
+  .svc-name { font-size: 13px; }
+}
