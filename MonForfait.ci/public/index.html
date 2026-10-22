@@ -3,41 +3,122 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MonForfait.ci - Connexion</title>
-  <!-- Feuille de style contenant l'animation de fond douce (req 3) -->
+  <title>MonForfait.ci – Forfaits Internet et Appels MTN, Orange, Moov en Côte d'Ivoire</title>
+  <meta name="description" content="Achetez vos forfaits Internet et Appels MTN, Orange et Moov en Côte d'Ivoire. Paiement par Wave, dépôt Mobile Money, recharge fibre, sans compte obligatoire.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#10B981">
+  <meta name="google-site-verification" content="gILjCPLc9mQR9Ua5Jz_b1w-JbyBhaiIvhDyJ0JBjPpg">
+  <link rel="canonical" href="https://MonForfait.fun">
+  <link rel="icon" type="image/png" href="img/logo.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_CI">
+  <meta property="og:site_name" content="MonForfait.ci">
+  <meta property="og:title" content="MonForfait.ci – Forfaits MTN, Orange et Moov en Côte d'Ivoire">
+  <meta property="og:description" content="Forfaits Internet et Appels, dépôt Mobile Money et recharge fibre. Paiement par Wave, sans compte obligatoire.">
+  <meta property="og:url" content="https://MonForfait.fun/">
+  <meta property="og:image" content="https://MonForfait.fun/img/logo.png">
+  <meta name="twitter:card" content="summary">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://MonForfait.fun/#website",
+        "url": https://MonForfait.fun,
+        "name": "MonForfait.ci",
+        "inLanguage": "fr-CI"
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://MonForfait.fun/#organization",
+        "name": "MonForfait.ci",
+        "url": "https://MonForfait.fun/",
+        "logo": "https://MonForfait.fun/img/logo.png",
+        "areaServed": { "@type": "Country", "name": "Côte d'Ivoire" },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+225-05-00-43-50-66",
+          "contactType": "customer service",
+          "availableLanguage": "fr"
+        }
+      }
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/seo.css">
 </head>
 <body>
-  <!--
-    Req 3 : La couleur de fond change de facon douce grace a
-    l'animation "backgroundShift" definie dans style.css.
-    Elle cycle entre plusieurs degrades toutes les 12 secondes.
-  -->
   <div class="container">
     <div class="card">
-      <!-- Logo avec animation logoWiggle -->
-      <img src="img/logo.png" class="logo" alt="Logo MonForfait">
-      <h1>Connexion</h1>
+      <img src="img/logo.png" class="logo" alt="Logo MonForfait.ci" width="80" height="80">
+      <h1>Connexion à MonForfait.ci</h1>
+      <p class="tagline">Achetez vos forfaits MTN, Orange et Moov en Côte d'Ivoire</p>
 
-      <!-- Champ email -->
-      <input type="email"    id="email"    placeholder="Email">
-      <!-- Champ mot de passe -->
-      <input type="password" id="password" placeholder="Mot de passe">
+      <input type="email"    id="email"    placeholder="Email" autocomplete="email">
+      <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password">
       <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" aria-label="Afficher ou masquer le mot de passe">Afficher le mot de passe</button>
-<!-- Bouton connexion : appelle login() dans app.js -->
       <button id="loginBtn">Se connecter</button>
 
-
       <p>Pas encore inscrit ? <a href="register.html">Créer un compte</a></p>
+      <p><a href="dashboard.html">Voir les forfaits sans vous connecter</a></p>
     </div>
+
+    <main class="info">
+      <section>
+        <h2>Forfaits Internet et Appels MTN, Orange et Moov</h2>
+        <p>MonForfait.ci est un service d'achat de forfaits mobiles en Côte d'Ivoire. Choisissez votre opérateur, sélectionnez un forfait Internet ou Appels, indiquez le numéro du receveur et payez par Wave. Vous pouvez acheter pour vous-même ou offrir un forfait à un proche.</p>
+      </section>
+
+      <section>
+        <h2>Nos services</h2>
+        <ul>
+          <li><strong>Forfaits Internet</strong> MTN, Orange et Moov</li>
+          <li><strong>Forfaits Appels</strong> MTN, Orange et Moov</li>
+          <li><strong>Dépôt Mobile Money</strong> sur Orange Money, MTN Money et Moov Money</li>
+          <li><strong>Recharge fibre</strong> Orange, MTN et Moov</li>
+          <li><strong>Souscription programmée</strong> pour recevoir un forfait à la date de votre choix</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Comment ça marche</h2>
+        <ol>
+          <li>Choisissez votre opérateur : MTN, Orange ou Moov.</li>
+          <li>Sélectionnez un forfait Internet ou Appels et saisissez le numéro du receveur.</li>
+          <li>Payez avec Wave. Un agent envoie ensuite le forfait au numéro indiqué.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Questions fréquentes</h2>
+        <details>
+          <summary>Comment payer mon forfait ?</summary>
+          <p>Le paiement se fait par Wave. Nous ne collectons ni votre code secret Wave ni vos identifiants Mobile Money.</p>
+        </details>
+        <details>
+          <summary>Quel numéro saisir pour recevoir le forfait ?</summary>
+          <p>Le numéro du receveur doit correspondre à l'opérateur choisi : il commence par 05 pour MTN, 07 pour Orange et 01 pour Moov.</p>
+        </details>
+        <details>
+          <summary>Que faire en cas de problème avec ma commande ?</summary>
+          <p>Contactez-nous dans les 24 heures avec la référence de votre transaction, par téléphone au 05 00 43 50 66 ou sur WhatsApp.</p>
+        </details>
+      </section>
+
+      <footer class="info-foot">
+        <p><a href="conditions.html">Conditions d'utilisation</a> · <a href="confidentialite.html">Politique de confidentialité</a></p>
+      </footer>
+    </main>
   </div>
 
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0"></script>
   <script src="js/supabase.js"></script>
-  <!-- Donnees des forfaits (requis par app.js) -->
   <script src="js/forfaits.js"></script>
-  <!-- Logique principale (contient login()) -->
   <script src="js/app.js"></script>
 </body>
 </html>
