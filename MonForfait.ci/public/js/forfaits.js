@@ -12,7 +12,7 @@
 // TAUX DE COMMISSION (×1.10 = +10% appliqué au paiement)
 // Modifiez cette valeur pour changer le taux de commission
 // ======================================================
-const COMMISSION_RATE = 1.10;
+const COMMISSION_RATE = 1.05;
 
 // ======================================================
 // PRÉFIXES TÉLÉPHONIQUES VALIDES PAR OPÉRATEUR (CI)
