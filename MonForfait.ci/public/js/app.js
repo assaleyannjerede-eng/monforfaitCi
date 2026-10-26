@@ -995,6 +995,74 @@ document.addEventListener('DOMContentLoaded', () => {
      GENERATION DYNAMIQUE DES FORFAITS
      ===================================================== */
 
+  /* =====================================================
+     CATEGORIES DE FORFAITS (regroupement par validité)
+     ===================================================== */
+
+  function validiteEnJours(offre) {
+
+    const m =
+      /(\d+)\s*jours?/i.exec(
+        (offre.desc || '') + ' ' + (offre.nom || '')
+      );
+
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function libelleValidite(jours) {
+
+    if (jours === null) return 'Autres offres';
+    if (jours === 1) return '1 jour';
+    if (jours === 7) return '7 jours · Semaine';
+
+    return jours + ' jours';
+  }
+
+  function regrouperParValidite(offres) {
+
+    const map = new Map();
+
+    offres.forEach(o => {
+
+      const j = validiteEnJours(o);
+
+      if (!map.has(j)) map.set(j, []);
+
+      map.get(j).push(o);
+    });
+
+    return Array.from(map.entries())
+      .sort((a, b) => {
+
+        if (a[0] === null) return 1;
+        if (b[0] === null) return -1;
+
+        return a[0] - b[0];
+      })
+      .map(([jours, liste]) => ({
+        label: libelleValidite(jours),
+        offres: liste
+      }));
+  }
+
+  function ouvrirCategorie(corps) {
+
+    corps.hidden = false;
+
+    const tete = corps.previousElementSibling;
+
+    if (tete) tete.setAttribute('aria-expanded', 'true');
+  }
+
+  function fermerCategorie(corps) {
+
+    corps.hidden = true;
+
+    const tete = corps.previousElementSibling;
+
+    if (tete) tete.setAttribute('aria-expanded', 'false');
+  }
+
   function construireForfaits(
     container,
     operateur,
@@ -1043,7 +1111,76 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    offres.forEach(offre => {
+    regrouperParValidite(offres).forEach((groupe, idx) => {
+
+    const catId =
+      'cat-' + operateur + '-' + categorie + '-' + idx;
+
+    const section =
+      document.createElement('div');
+
+    section.className = 'cat-section';
+
+    const entete =
+      document.createElement('button');
+
+    entete.type = 'button';
+    entete.className = 'cat-head';
+    entete.setAttribute('aria-expanded', 'false');
+    entete.setAttribute('aria-controls', catId);
+
+    const titre =
+      document.createElement('span');
+
+    titre.className = 'cat-title';
+    titre.textContent = groupe.label;
+
+    const meta =
+      document.createElement('span');
+
+    meta.className = 'cat-meta';
+
+    const prixMin =
+      Math.min(
+        ...groupe.offres.map(
+          o => prixAvecCommission(o.prix)
+        )
+      );
+
+    meta.textContent =
+      groupe.offres.length +
+      (groupe.offres.length > 1 ? ' offres' : ' offre') +
+      ' · dès ' + formaterPrix(prixMin);
+
+    const chev =
+      document.createElement('span');
+
+    chev.className = 'chev';
+    chev.textContent = '▾';
+
+    entete.append(titre, meta, chev);
+
+    const corps =
+      document.createElement('div');
+
+    corps.id = catId;
+    corps.className = 'cat-body forfait-row';
+    corps.hidden = true;
+
+    entete.addEventListener('click', () => {
+
+      const ouvert =
+        entete.getAttribute('aria-expanded') === 'true';
+
+      /* une seule catégorie ouverte à la fois */
+      container
+        .querySelectorAll('.cat-body')
+        .forEach(c => fermerCategorie(c));
+
+      if (!ouvert) ouvrirCategorie(corps);
+    });
+
+    groupe.offres.forEach(offre => {
 
       const prixFinal =
         prixAvecCommission(
@@ -1109,7 +1246,12 @@ document.addEventListener('DOMContentLoaded', () => {
       label.appendChild(info);
       label.appendChild(priceEl);
 
-      container.appendChild(label);
+      corps.appendChild(label);
+    });
+
+    section.append(entete, corps);
+    container.appendChild(section);
+
     });
   }
 
@@ -1125,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.createElement('div');
 
       rowAppels.className =
-        'forfait-row';
+        'forfait-cats';
 
       panelAppels.appendChild(
         rowAppels
@@ -1146,7 +1288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.createElement('div');
 
       rowInternet.className =
-        'forfait-row';
+        'forfait-cats';
 
       panelInternet.appendChild(
         rowInternet
@@ -2175,6 +2317,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (panel && bouton) {
       toggleAccordion(bouton, panel);
+    }
+
+    const corpsCat =
+      radio.closest('.cat-body');
+
+    if (corpsCat) {
+
+      paymentForm
+        .querySelectorAll('.cat-body')
+        .forEach(c => fermerCategorie(c));
+
+      ouvrirCategorie(corpsCat);
     }
 
     radio.closest('.forfait-card')
@@ -3528,10 +3682,60 @@ document.addEventListener('DOMContentLoaded', () => {
           err
         );
 
-        alert(
-          err.message ||
-          'Erreur lors de la connexion.'
-        );
+        const brut =
+          String(err?.message || '').toLowerCase();
+
+        const code =
+          String(err?.code || '').toLowerCase();
+
+        let message =
+          'Erreur lors de la connexion. Réessayez.';
+
+        if (
+          code === 'invalid_credentials' ||
+          brut.includes('invalid login credentials')
+        ) {
+
+          /* Supabase ne dit pas si c'est l'email ou le mot de passe
+             qui est faux (protection volontaire), d'où ce message. */
+          message =
+            'Mot de passe ou email incorrect.';
+
+          const champMdp =
+            document.getElementById('password');
+
+          if (champMdp) {
+            champMdp.value = '';
+            champMdp.focus();
+          }
+
+        } else if (
+          code === 'email_not_confirmed' ||
+          brut.includes('email not confirmed')
+        ) {
+
+          message =
+            'Veuillez confirmer votre email avant de vous connecter.';
+
+        } else if (
+          err?.status === 429 ||
+          code.includes('rate_limit') ||
+          brut.includes('rate limit')
+        ) {
+
+          message =
+            'Trop de tentatives. Réessayez dans quelques minutes.';
+
+        } else if (
+          brut.includes('failed to fetch') ||
+          brut.includes('network')
+        ) {
+
+          message =
+            'Problème de connexion internet. Vérifiez votre réseau.';
+        }
+
+        alert(message);
       }
     };
 
