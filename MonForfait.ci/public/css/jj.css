@@ -1,5 +1,4 @@
-
-    /* =========================
+/* =========================
        Variables globales / thème MTN par défaut
        ========================= */
     :root{
@@ -620,3 +619,18 @@ body.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .habit-item { transition: none; }
 }
+
+
+/* ===== Categories de forfaits (accordeons imbriques) ===== */
+.forfait-cats{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.cat-section{border-radius:12px;overflow:hidden;border:1px solid var(--cat-border,rgba(128,128,128,.25))}
+.cat-head{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--panel-bg);color:inherit;border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;box-shadow:none;transform:none}
+.cat-head:hover{filter:brightness(1.08)}
+.cat-head:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.cat-title{font-weight:700;flex:1}
+.cat-meta{font-size:.85rem;opacity:.75;white-space:nowrap}
+.cat-head .chev{transition:transform .18s ease}
+.cat-head[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.cat-body{padding:10px;margin-top:0}
+.cat-body[hidden]{display:none}
+@media (max-width:640px){.cat-meta{font-size:.78rem}}
