@@ -3,9 +3,9 @@
  * ===============================================
  * Fonctionnalités :
  * - Modal forfait par opérateur
- * - Forfaits dynamiques depuis forfaits.js
+ 
  * - Validation numéro receveur selon opérateur 07/05/01
- * - Prix x1.10
+ 
  * - Historique localStorage
  * - Supabase pour les transactions
  * - Authentification Supabase
@@ -996,53 +996,64 @@ document.addEventListener('DOMContentLoaded', () => {
      ===================================================== */
 
   /* =====================================================
-     CATEGORIES DE FORFAITS (regroupement par validité)
+     CATEGORIES DE FORFAITS (regroupement par nom en base)
+     Chaque nom de forfait (colonne "nom") devient une catégorie
+     (liste déroulante). Espaces en trop et majuscules ignorés.
      ===================================================== */
 
-  function validiteEnJours(offre) {
+  function nettoyerTexte(t) {
 
-    const m =
-      /(\d+)\s*jours?/i.exec(
-        (offre.desc || '') + ' ' + (offre.nom || '')
-      );
-
-    return m ? parseInt(m[1], 10) : null;
+    return String(t || '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
-  function libelleValidite(jours) {
+  function regrouperParNom(offres) {
 
-    if (jours === null) return 'Autres offres';
-    if (jours === 1) return '1 jour';
-    if (jours === 7) return '7 jours · Semaine';
-
-    return jours + ' jours';
-  }
-
-  function regrouperParValidite(offres) {
-
-    const map = new Map();
+    const groupes = new Map();
 
     offres.forEach(o => {
 
-      const j = validiteEnJours(o);
+      const propre =
+        nettoyerTexte(o.nom) || 'Autres offres';
 
-      if (!map.has(j)) map.set(j, []);
+      const cle =
+        propre.toLowerCase();
 
-      map.get(j).push(o);
+      if (!groupes.has(cle)) {
+        groupes.set(cle, {
+          variantes: new Map(),
+          offres: []
+        });
+      }
+
+      const g = groupes.get(cle);
+
+      g.offres.push(o);
+
+      g.variantes.set(
+        propre,
+        (g.variantes.get(propre) || 0) + 1
+      );
     });
 
-    return Array.from(map.entries())
-      .sort((a, b) => {
+    return Array.from(groupes.values())
+      .map(g => {
 
-        if (a[0] === null) return 1;
-        if (b[0] === null) return -1;
+        /* libellé = l'écriture la plus fréquente du nom */
+        const label =
+          Array.from(g.variantes.entries())
+            .sort((x, y) => y[1] - x[1])[0][0];
 
-        return a[0] - b[0];
+        return {
+          label,
+          offres: g.offres,
+          prixMin: Math.min(...g.offres.map(o => o.prix))
+        };
       })
-      .map(([jours, liste]) => ({
-        label: libelleValidite(jours),
-        offres: liste
-      }));
+      /* catégories rangées de la moins chère à la plus chère
+         (le tri est stable : à égalité, ordre d'apparition) */
+      .sort((x, y) => x.prixMin - y.prixMin);
   }
 
   function ouvrirCategorie(corps) {
@@ -1111,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    regrouperParValidite(offres).forEach((groupe, idx) => {
+    regrouperParNom(offres).forEach((groupe, idx) => {
 
     const catId =
       'cat-' + operateur + '-' + categorie + '-' + idx;
@@ -1219,7 +1230,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'forfait-name';
 
       nameEl.textContent =
-        offre.nom;
+        nettoyerTexte(offre.desc) ||
+        nettoyerTexte(offre.nom);
 
       const descEl =
         document.createElement('div');
@@ -1227,8 +1239,7 @@ document.addEventListener('DOMContentLoaded', () => {
       descEl.className =
         'forfait-desc';
 
-      descEl.textContent =
-        offre.desc;
+      descEl.textContent = '';
 
       const priceEl =
         document.createElement('span');
@@ -1240,7 +1251,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formaterPrix(prixFinal);
 
       info.appendChild(nameEl);
-      info.appendChild(descEl);
 
       label.appendChild(input);
       label.appendChild(info);
