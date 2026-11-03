@@ -634,3 +634,24 @@ body.modal-open { overflow: hidden; }
 .cat-body{padding:10px;margin-top:0}
 .cat-body[hidden]{display:none}
 @media (max-width:640px){.cat-meta{font-size:.78rem}}
+
+
+/* ===== Page stable : pas de zoom automatique, pas d'animation qui agrandit ===== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* iPhone/Android zooment tout seuls dès qu'on touche un champ dont la police est < 16px */
+@media (max-width: 900px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* Animations d'entrée : simple apparition, sans effet de zoom */
+@keyframes cardPop  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes bounceIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Logo fixe (il flottait en continu) */
+.logo { animation: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .card { opacity: 1 !important; transform: none !important; }
+}
