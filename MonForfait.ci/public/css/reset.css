@@ -1,0 +1,23 @@
+/* reset.css - pages "mot de passe oublié" (forgot.html) et "nouveau mot de passe" (reset.html) */
+.intro { font-size: 0.95rem; line-height: 1.55; color: #4B5563; margin: -10px 0 14px; }
+.hint { font-size: 0.82rem; line-height: 1.45; color: #4B5563; text-align: left; margin: 2px 2px 8px; }
+
+.msg { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 0.92rem; line-height: 1.45; text-align: left; border: 1px solid transparent; }
+.msg[hidden] { display: none; }
+.msg.ok   { background: #ECFDF5; color: #065F46; border-color: #A7F3D0; }
+.msg.err  { background: #FEF2F2; color: #991B1B; border-color: #FECACA; }
+.msg.info { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+
+.link-btn { width: auto !important; margin: 4px 0 10px !important; padding: 4px 6px !important; background: none !important; box-shadow: none !important; color: #1D4ED8 !important; font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+
+/* ===== Récupération en 3 étapes (sans email) ===== */
+.steps { font-size: 0.82rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #6B7280; margin: -12px 0 14px; }
+.field { text-align: left; margin-bottom: 4px; }
+.field label { display: block; font-size: 0.88rem; font-weight: 600; color: #374151; margin: 8px 0 4px; }
+.help { font-size: 0.82rem; color: #4B5563; }
+
+.choice { display: flex; gap: 8px; margin: 0 0 12px; }
+.choice-btn { flex: 1; width: auto !important; margin: 0 !important; padding: 10px 8px !important; background: #fff !important; color: #374151 !important; border: 2px solid #D1D5DB !important; box-shadow: none !important; font-size: 0.95rem; }
+.choice-btn[aria-pressed="true"] { border-color: #10B981 !important; background: #ECFDF5 !important; color: #065F46 !important; font-weight: 700; }
+section[hidden] { display: none; }
