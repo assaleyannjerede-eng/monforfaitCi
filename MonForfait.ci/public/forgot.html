@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mot de passe oublié – MonForfait.ci</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/reset.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <img src="img/logo.png" class="logo" alt="Logo MonForfait.ci" width="80" height="80">
+      <h1>Mot de passe oublié</h1>
+      <p class="steps" id="stepLabel">Étape 1 sur 3</p>
+
+      <!-- ETAPE 1 : email ou numéro -->
+      <section id="step1">
+        <p class="intro">Comment voulez-vous retrouver votre compte ?</p>
+        <div class="choice" role="group" aria-label="Méthode d'identification">
+          <button type="button" class="choice-btn" id="byEmail" aria-pressed="true">Mon email</button>
+          <button type="button" class="choice-btn" id="byPhone" aria-pressed="false">Mon numéro</button>
+        </div>
+        <input type="email" id="identifier" placeholder="Votre email" autocomplete="email" inputmode="email">
+        <button type="button" id="next1">Continuer</button>
+      </section>
+
+      <!-- ETAPE 2 : questions sur la dernière transaction -->
+      <section id="step2" hidden>
+        <p class="intro">Pour confirmer que ce compte est bien le vôtre, répondez à ces questions sur votre <strong>dernière transaction</strong>. Remplissez au moins 2 champs.</p>
+        <div class="field">
+          <label for="qDate">Date de la dernière transaction</label>
+          <input type="date" id="qDate">
+        </div>
+        <div class="field">
+          <label for="qPrix">Montant payé (en FCFA)</label>
+          <input type="number" id="qPrix" inputmode="numeric" min="1" step="1" placeholder="Ex : 315">
+        </div>
+        <div class="field">
+          <label for="qRecv">Numéro qui a reçu le forfait</label>
+          <input type="tel" id="qRecv" inputmode="tel" placeholder="Ex : 07 01 02 03 04" autocomplete="off">
+        </div>
+        <button type="button" id="verifyBtn">Vérifier</button>
+        <button type="button" id="back2" class="link-btn">Retour</button>
+      </section>
+
+      <!-- ETAPE 3 : nouveau mot de passe -->
+      <section id="step3" hidden>
+        <p class="intro">Identité confirmée. Choisissez votre nouveau mot de passe.</p>
+        <input type="password" id="newPassword" placeholder="Nouveau mot de passe" autocomplete="new-password">
+        <input type="password" id="confirmPassword" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+        <p class="hint">6 caractères minimum, avec un chiffre, une majuscule et un caractère spécial (@ &amp; € # $ £ ¥ %).</p>
+        <button type="button" id="toggleBtn" class="link-btn" aria-pressed="false">Afficher les mots de passe</button>
+        <button type="button" id="saveBtn">Enregistrer le mot de passe</button>
+      </section>
+
+      <p id="msg" class="msg" role="status" aria-live="polite" hidden></p>
+
+      <p><a href="index.html">Retour à la connexion</a></p>
+      <p class="help">Un problème ? Écrivez-nous sur <a href="https://wa.me/2250500435066" target="_blank" rel="noopener">WhatsApp au 05 00 43 50 66</a>.</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/password-reset.js"></script>
+</body>
+</html>
